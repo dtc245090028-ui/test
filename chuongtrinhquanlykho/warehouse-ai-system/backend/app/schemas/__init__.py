@@ -1,0 +1,3 @@
+"""schemas/__init__.py — Package cho Marshmallow schemas"""
+# Schemas validate dữ liệu đầu vào cho từng router
+# VD: LoginSchema, SupplierSchema, GoodsSchema...

@@ -1,0 +1,50 @@
+# === Môi trường & secrets — TUYỆT ĐỐI không commit ===
+.env
+.env.local
+*.env
+!.env.example
+
+# === Python / Flask ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+*.sqlite3
+*.db
+instance/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# === Node / React (nếu dùng frontend React) ===
+node_modules/
+frontend/build/
+frontend/dist/
+.npm/
+npm-debug.log*
+yarn-error.log*
+
+# === Editor / IDE ===
+.vscode/
+.idea/
+*.swp
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Log & file tạm ===
+*.log
+tmp/
+*.tmp
+
+# === Docker (nếu đóng gói cuối kỳ) ===
+*.pid
+
+# === Dữ liệu thật (chỉ giữ seed mẫu, không commit DB thật) ===
+database/warehouse.db
+database/*.sqlite3
+!database/seed_data.sql

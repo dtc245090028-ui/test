@@ -1,0 +1,4 @@
+# prompts/ — Thư mục chứa prompt AI
+# Bắt buộc tách prompt ra file riêng (theo AGENTS.md mục 4 và Prompt.md mục 14.5)
+# File prompt đặt tại đây: inventory_report_prompt.txt, reorder_suggestion_prompt.txt
+# Sẽ tạo khi code module AI (KT3)
