@@ -18,8 +18,8 @@
 | Module | Trạng thái |
 |---|---|
 | Auth | ✅ Đã code (2026-08-04) |
-| Suppliers (Nhà cung cấp) | ⬜ Chưa điền |
-| Goods (Hàng hóa) | ⬜ Chưa điền |
+| Suppliers (Nhà cung cấp) | ✅ Đã code (2026-08-08) |
+| Goods (Hàng hóa) | ✅ Đã code (2026-08-08) |
 | Purchase Orders (Đơn đặt hàng) | ⬜ Chưa điền |
 | Goods Receipts (Phiếu nhập) | ⬜ Chưa điền |
 | Goods Issues (Phiếu xuất) | ⬜ Chưa điền |
@@ -89,7 +89,60 @@
 | PUT | `/api/suppliers/{id}` | Cập nhật | Quản lý kho, Ban điều hành |
 | DELETE | `/api/suppliers/{id}` | Xóa (hoặc đổi status ngừng hợp tác) | Ban điều hành |
 
-*(Điền field request/response cụ thể khi code — bám theo bảng `suppliers` mục 6 Prompt.md)*
+**Request `POST /api/suppliers` & `PUT /api/suppliers/{id}`**
+```json
+{
+  "name": "string (bắt buộc)",
+  "contact_person": "string (tùy chọn)",
+  "phone": "string (tùy chọn)",
+  "email": "string (tùy chọn, chuẩn định dạng email)",
+  "address": "string (tùy chọn)",
+  "tax_code": "string (tùy chọn)",
+  "status": "active | inactive (mặc định active)"
+}
+```
+
+**Response 200 / 201 (Chi tiết Supplier)**
+```json
+{
+  "id": 1,
+  "name": "Công ty TNHH ABC",
+  "contact_person": "Nguyễn Văn A",
+  "phone": "0901234567",
+  "email": "contact@abc.com",
+  "address": "123 Đường XYZ, TP.HCM",
+  "tax_code": "0312345678",
+  "status": "active"
+}
+```
+
+**Response `GET /api/suppliers` (200 - Phân trang)**
+```json
+{
+  "total": 100,
+  "page": 1,
+  "page_size": 20,
+  "data": [
+    {
+      "id": 1,
+      "name": "Công ty TNHH ABC",
+      "contact_person": "Nguyễn Văn A",
+      "phone": "0901234567",
+      "email": "contact@abc.com",
+      "address": "123 Đường XYZ, TP.HCM",
+      "tax_code": "0312345678",
+      "status": "active"
+    }
+  ]
+}
+```
+
+**Response `DELETE /api/suppliers/{id}` (200)**
+```json
+{
+  "message": "Đã xóa (ngừng hợp tác) nhà cung cấp thành công"
+}
+```
 
 ---
 
@@ -103,7 +156,63 @@
 | PUT | `/api/goods/{id}` | Cập nhật | Quản lý kho, Ban điều hành |
 | GET | `/api/goods/low-stock` | Danh sách hàng dưới ngưỡng Min | Tất cả role |
 
-*(Điền field request/response cụ thể khi code — bám theo bảng `goods` mục 6 Prompt.md)*
+**Request `POST /api/goods` & `PUT /api/goods/{id}`**
+```json
+{
+  "sku": "string (bắt buộc, duy nhất)",
+  "name": "string (bắt buộc)",
+  "category_id": "integer (bắt buộc)",
+  "preferred_supplier_id": "integer (tùy chọn)",
+  "unit": "string (bắt buộc, ví dụ: Cái, Hộp, kg)",
+  "min_stock": "integer/float (tùy chọn, mặc định 0)",
+  "max_stock": "integer/float (tùy chọn)",
+  "selling_price": "float (tùy chọn, mặc định 0)",
+  "description": "string (tùy chọn)",
+  "image_url": "string (tùy chọn)",
+  "status": "active | inactive (mặc định active)"
+}
+```
+*(Lưu ý: `quantity_on_hand` không truyền vào khi tạo/cập nhật, vì chỉ được thay đổi qua giao dịch kho.)*
+
+**Response 200 / 201 (Chi tiết Hàng hóa)**
+```json
+{
+  "id": 1,
+  "sku": "SP001",
+  "name": "Sản phẩm A",
+  "category_id": 2,
+  "preferred_supplier_id": 3,
+  "unit": "Cái",
+  "min_stock": 10,
+  "max_stock": 100,
+  "quantity_on_hand": 50,
+  "selling_price": 150000.0,
+  "description": "Mô tả sản phẩm A",
+  "image_url": "https://example.com/image.jpg",
+  "status": "active"
+}
+```
+
+**Response `GET /api/goods` & `GET /api/goods/low-stock` (200 - Phân trang)**
+```json
+{
+  "total": 50,
+  "page": 1,
+  "page_size": 20,
+  "data": [
+    {
+      "id": 1,
+      "sku": "SP001",
+      "name": "Sản phẩm A",
+      "category_id": 2,
+      "unit": "Cái",
+      "quantity_on_hand": 50,
+      "min_stock": 10,
+      "status": "active"
+    }
+  ]
+}
+```
 
 ---
 

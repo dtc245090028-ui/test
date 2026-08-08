@@ -9,8 +9,6 @@ bảng dù file model đã được viết xong.
 """
 
 from app.models.user import User
-
-# Các model khác sẽ thêm vào đây theo từng module
-# from app.models.supplier import Supplier
-# from app.models.goods import Goods
-# ...
+from app.models.supplier import Supplier
+from app.models.category import Category
+from app.models.goods import Goods

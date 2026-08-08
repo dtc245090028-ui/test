@@ -30,7 +30,7 @@ from app.extensions import db, jwt, ma
 from app.models import User  # Import để SQLAlchemy nhận biết model
 
 
-def create_app() -> Flask:
+def create_app(test_config: dict = None) -> Flask:
     """
     Factory function — tạo và cấu hình Flask application.
 
@@ -52,6 +52,13 @@ def create_app() -> Flask:
 
     # ---- Cấu hình từ biến môi trường ----
     _configure_app(app)
+
+    # ---- Override config cho môi trường test (nếu có) ----
+    # test_config phải được merge TRƯỚC khi gọi db.init_app() để
+    # SQLAlchemy tạo engine với đúng URI (sqlite:///:memory: khi test,
+    # không phải file warehouse.db).
+    if test_config:
+        app.config.update(test_config)
 
     # ---- Bật CORS (Cross-Origin Resource Sharing) ----
     # Cho phép frontend (chạy port khác) gọi API backend
@@ -114,10 +121,13 @@ def _register_blueprints(app: Flask) -> None:
     from app.auth import auth_bp
     app.register_blueprint(auth_bp)
 
-    # Các module khác sẽ thêm vào đây theo từng sprint:
-    # from app.routers.suppliers import suppliers_bp
-    # app.register_blueprint(suppliers_bp)
-    # ...
+    # Module Suppliers — /api/suppliers (GET, POST, GET/id, PUT/id, DELETE/id)
+    from app.routers.suppliers import suppliers_bp
+    app.register_blueprint(suppliers_bp)
+
+    # Module Goods — /api/goods
+    from app.routers.goods import goods_bp
+    app.register_blueprint(goods_bp)
 
     app.logger.info("✅ Đã đăng ký tất cả Blueprint.")
 
