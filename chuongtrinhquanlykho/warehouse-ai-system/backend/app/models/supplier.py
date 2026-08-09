@@ -119,12 +119,12 @@ class Supplier(db.Model):
     #   - SupplierInvoice → module supplier_invoices
     #   - Goods          → module goods
 
-    # purchase_orders = db.relationship(
-    #     "PurchaseOrder",
-    #     back_populates="supplier",
-    #     lazy="dynamic",
-    # )
-    # """Các đơn đặt hàng gửi cho NCC này"""
+    purchase_orders = db.relationship(
+        "PurchaseOrder",
+        back_populates="supplier",
+        lazy="dynamic",
+    )
+    """Các đơn đặt hàng gửi cho NCC này"""
 
     # goods_receipts = db.relationship(
     #     "GoodsReceipt",

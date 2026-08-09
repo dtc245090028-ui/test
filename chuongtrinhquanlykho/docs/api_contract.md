@@ -20,7 +20,7 @@
 | Auth | ✅ Đã code (2026-08-04) |
 | Suppliers (Nhà cung cấp) | ✅ Đã code (2026-08-08) |
 | Goods (Hàng hóa) | ✅ Đã code (2026-08-08) |
-| Purchase Orders (Đơn đặt hàng) | ⬜ Chưa điền |
+| Purchase Orders (Đơn đặt hàng) | ✅ Đã code (2026-08-09) |
 | Goods Receipts (Phiếu nhập) | ⬜ Chưa điền |
 | Goods Issues (Phiếu xuất) | ⬜ Chưa điền |
 | Stocktakes (Kiểm kê) | ⬜ Chưa điền |
@@ -225,7 +225,69 @@
 | GET | `/api/purchase-orders/{id}` | Chi tiết + items | Thủ kho, Quản lý kho |
 | PUT | `/api/purchase-orders/{id}/status` | Cập nhật trạng thái | Thủ kho |
 
-*(Điền chi tiết khi code)*
+**Request `POST /api/purchase-orders`**
+```json
+{
+  "supplier_id": 2,
+  "order_date": "2026-08-09T16:00:00Z",
+  "items": [
+    {
+      "goods_id": 5,
+      "quantity_ordered": 100,
+      "unit_price": 50000.0
+    }
+  ]
+}
+```
+*(Yêu cầu: `quantity_ordered` > 0 cho mọi item)*
+
+**Response 200 / 201 (Chi tiết Purchase Order mới tạo)**
+```json
+{
+  "id": 1,
+  "supplier_id": 2,
+  "created_by": 3,
+  "order_date": "2026-08-09T16:00:00Z",
+  "status": "chờ xác nhận",
+  "items": [
+    {
+      "id": 1,
+      "goods_id": 5,
+      "quantity_ordered": 100,
+      "unit_price": 50000.0
+    }
+  ]
+}
+```
+
+**Request `PUT /api/purchase-orders/{id}/status`**
+```json
+{
+  "status": "chờ xác nhận | đã xác nhận | đang giao | đã nhận | hủy"
+}
+```
+*(Ghi chú: PO đã "hủy" hoặc "đã nhận" thì không được phép sửa item hoặc đổi về trạng thái trước đó. Luồng trạng thái sẽ được chốt sau khi xác nhận với người dùng.)*
+
+**Response `GET /api/purchase-orders` (200 - Phân trang)**
+```json
+{
+  "total": 50,
+  "page": 1,
+  "page_size": 20,
+  "data": [
+    {
+      "id": 1,
+      "supplier_id": 2,
+      "created_by": 3,
+      "order_date": "2026-08-09T16:00:00Z",
+      "status": "chờ xác nhận"
+    }
+  ]
+}
+```
+
+**Response `GET /api/purchase-orders/{id}` (200 - Chi tiết)**
+*(Cấu trúc tương tự Response 201 của `POST`, gồm các trường cơ bản và mảng `items` chi tiết).*
 
 ---
 

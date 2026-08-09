@@ -37,6 +37,7 @@ class Goods(db.Model):
 
     category = db.relationship("Category", back_populates="goods")
     preferred_supplier = db.relationship("Supplier", back_populates="preferred_goods")
+    purchase_order_items = db.relationship("PurchaseOrderItem", back_populates="goods", lazy="dynamic")
 
     def to_dict(self) -> dict:
         return {

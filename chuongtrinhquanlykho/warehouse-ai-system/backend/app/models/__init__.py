@@ -12,3 +12,4 @@ from app.models.user import User
 from app.models.supplier import Supplier
 from app.models.category import Category
 from app.models.goods import Goods
+from app.models.purchase_order import PurchaseOrder, PurchaseOrderItem
