@@ -26,7 +26,8 @@
   tests/test_purchase_orders.py. 7. Chạy 4/4 test        
   cases passed 100%. | Đã kiểm tra luồng API và code     
   pass toàn bộ test. | (Tên của bạn) |
----
+
+| 12/08/2026 | KT2 | Sinh module Goods Receipts (Phiếu nhập kho) | Đọc api_contract.md mục 5, ai_prompt_log.md, Prompt.md (##6 thiết kế CSDL, ##8 AI). Yêu cầu: Điền chi tiết API trước khi code. Sinh models/goods_receipt.py (GoodsReceipt + GoodsReceiptItem), cập nhật relationships ở supplier/goods/purchase_order. Sinh routers/goods_receipts.py (3 endpoint, phân quyền). Sinh tests/test_goods_receipts.py (22 TC đủ ca đúng + ca lỗi/biên + phân quyền). Ràng buộc: transaction cập nhật tồn kho, unit_price snapshot cố định, quantity > 0, chặn NCC/Goods inactive. | 1. Cập nhật api_contract.md mục 5 (điền đầy đủ chi tiết + error codes, đổi ⬜→✅). 2. Tạo models/goods_receipt.py. 3. Uncomment goods_receipts relationship ở Supplier. 4. Thêm goods_receipt_items relationship ở Goods. 5. Thêm goods_receipts relationship ở PurchaseOrder. 6. Cập nhật models/__init__.py. 7. Tạo routers/goods_receipts.py với transaction logic. 8. Đăng ký blueprint trong main.py. 9. Tạo tests/test_goods_receipts.py 22 TC. | Chạy pytest: **22/22 PASSED** (26.71s). Kiểm chứng: tồn kho cập nhật đúng (+quantity), unit_price lưu snapshot, rollback đúng khi lỗi, phân quyền 403/401 đúng format. | Sinh viên |
 
 ## Ghi chú cách điền
 

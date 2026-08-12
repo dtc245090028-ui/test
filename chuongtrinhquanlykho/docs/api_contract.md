@@ -21,7 +21,7 @@
 | Suppliers (Nhà cung cấp) | ✅ Đã code (2026-08-08) |
 | Goods (Hàng hóa) | ✅ Đã code (2026-08-08) |
 | Purchase Orders (Đơn đặt hàng) | ✅ Đã code (2026-08-09) |
-| Goods Receipts (Phiếu nhập) | ⬜ Chưa điền |
+| Goods Receipts (Phiếu nhập) | ✅ Đã code (2026-08-12) |
 | Goods Issues (Phiếu xuất) | ⬜ Chưa điền |
 | Stocktakes (Kiểm kê) | ⬜ Chưa điền |
 | Supplier Invoices & Payments (Công nợ) | ⬜ Chưa điền |
@@ -295,11 +295,89 @@
 
 | Method | Path | Mô tả | Role |
 |---|---|---|---|
-| GET | `/api/goods-receipts` | Danh sách, filter theo ngày/NCC | Thủ kho, Quản lý kho |
+| GET | `/api/goods-receipts` | Danh sách, filter `?supplier_id=&date_from=&date_to=&po_id=` | Thủ kho, Quản lý kho |
 | POST | `/api/goods-receipts` | Lập phiếu nhập (transaction, cập nhật tồn) | Thủ kho |
 | GET | `/api/goods-receipts/{id}` | Chi tiết | Thủ kho, Quản lý kho |
 
-*(Điền chi tiết khi code — nhớ ràng buộc: unit_price lưu cố định theo lần nhập)*
+**Request `POST /api/goods-receipts`**
+```json
+{
+  "supplier_id": 1,
+  "po_id": 2,
+  "received_date": "2026-08-12T10:00:00Z",
+  "note": "string (tùy chọn)",
+  "items": [
+    {
+      "goods_id": 5,
+      "quantity": 100,
+      "unit_price": 50000.0
+    }
+  ]
+}
+```
+*(Yêu cầu: `quantity` > 0; `unit_price` >= 0 — lưu cố định snapshot theo lần nhập, không thay đổi sau này; `po_id` tùy chọn — nếu có thì phải thuộc đúng `supplier_id`)*
+
+**Response 200 / 201 (Chi tiết Phiếu nhập)**
+```json
+{
+  "id": 1,
+  "supplier_id": 1,
+  "po_id": 2,
+  "created_by": 3,
+  "received_date": "2026-08-12T10:00:00",
+  "note": "Nhập lô hàng tháng 8",
+  "created_at": "2026-08-12T10:00:05",
+  "updated_at": "2026-08-12T10:00:05",
+  "items": [
+    {
+      "id": 1,
+      "receipt_id": 1,
+      "goods_id": 5,
+      "quantity": 100,
+      "unit_price": 50000.0
+    }
+  ]
+}
+```
+
+**Response `GET /api/goods-receipts` (200 — Phân trang)**
+```json
+{
+  "total": 30,
+  "page": 1,
+  "page_size": 20,
+  "data": [
+    {
+      "id": 1,
+      "supplier_id": 1,
+      "po_id": 2,
+      "created_by": 3,
+      "received_date": "2026-08-12T10:00:00",
+      "note": null,
+      "created_at": "2026-08-12T10:00:05",
+      "updated_at": "2026-08-12T10:00:05"
+    }
+  ]
+}
+```
+*(Lưu ý: `data` trong danh sách không bao gồm mảng `items` — gọi GET/{id} để lấy chi tiết)*
+
+**Error codes**
+| HTTP | error_code | Trường hợp |
+|---|---|---|
+| 400 | `MISSING_FIELDS` | Thiếu `supplier_id` hoặc `items` rỗng |
+| 400 | `INVALID_QUANTITY` | `quantity` ≤ 0 trong bất kỳ dòng nào |
+| 400 | `INVALID_UNIT_PRICE` | `unit_price` âm trong bất kỳ dòng nào |
+| 400 | `SUPPLIER_INACTIVE` | NCC đã ngừng hợp tác |
+| 400 | `GOODS_INACTIVE` | Hàng hóa đã ngừng kinh doanh |
+| 400 | `PO_SUPPLIER_MISMATCH` | `po_id` không thuộc `supplier_id` đã chọn |
+| 400 | `INVALID_DATE_FORMAT` | `received_date` sai định dạng ISO 8601 |
+| 404 | `SUPPLIER_NOT_FOUND` | Không tìm thấy NCC |
+| 404 | `GOODS_NOT_FOUND` | Không tìm thấy hàng hóa |
+| 404 | `PO_NOT_FOUND` | Không tìm thấy đơn đặt hàng |
+| 404 | `RECEIPT_NOT_FOUND` | Không tìm thấy phiếu nhập |
+
+> **Ràng buộc quan trọng**: `goods.quantity_on_hand` chỉ được cập nhật qua transaction (flush → add items → cập nhật tồn → commit). Nếu bất kỳ bước nào thất bại → rollback toàn bộ. `goods_receipt_items.unit_price` lưu cố định (snapshot) tại thời điểm nhập, không thay đổi dù giá nhập sau này thay đổi.
 
 ---
 

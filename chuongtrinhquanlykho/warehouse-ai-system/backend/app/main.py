@@ -133,6 +133,10 @@ def _register_blueprints(app: Flask) -> None:
     from app.routers.purchase_orders import bp as purchase_orders_bp
     app.register_blueprint(purchase_orders_bp)
 
+    # Module Goods Receipts (Phiếu nhập) — /api/goods-receipts
+    from app.routers.goods_receipts import goods_receipts_bp
+    app.register_blueprint(goods_receipts_bp)
+
     app.logger.info("✅ Đã đăng ký tất cả Blueprint.")
 
 

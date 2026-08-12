@@ -28,6 +28,8 @@ class PurchaseOrder(db.Model):
     supplier = db.relationship("Supplier", back_populates="purchase_orders")
     creator = db.relationship("User", foreign_keys=[created_by])
     items = db.relationship("PurchaseOrderItem", back_populates="purchase_order", cascade="all, delete-orphan")
+    goods_receipts = db.relationship("GoodsReceipt", back_populates="purchase_order", lazy="dynamic")
+    """Các phiếu nhập liên kết với PO này — dùng đối chiếu số lượng đặt vs. thực nhận"""
 
     def to_dict(self, include_items=False) -> dict:
         data = {
