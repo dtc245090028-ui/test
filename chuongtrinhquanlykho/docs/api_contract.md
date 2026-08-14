@@ -22,7 +22,7 @@
 | Goods (Hàng hóa) | ✅ Đã code (2026-08-08) |
 | Purchase Orders (Đơn đặt hàng) | ✅ Đã code (2026-08-09) |
 | Goods Receipts (Phiếu nhập) | ✅ Đã code (2026-08-12) |
-| Goods Issues (Phiếu xuất) | ⬜ Chưa điền |
+| Goods Issues (Phiếu xuất) | ✅ Đã code (2026-08-14) |
 | Stocktakes (Kiểm kê) | ⬜ Chưa điền |
 | Supplier Invoices & Payments (Công nợ) | ⬜ Chưa điền |
 | Reports (Thống kê/báo cáo) | ⬜ Chưa điền |
@@ -385,11 +385,77 @@
 
 | Method | Path | Mô tả | Role |
 |---|---|---|---|
-| GET | `/api/goods-issues` | Danh sách | Thủ kho, Quản lý kho |
+| GET | `/api/goods-issues` | Danh sách, filter `?date_from=&date_to=` | Thủ kho, Quản lý kho |
 | POST | `/api/goods-issues` | Lập phiếu xuất (chặn xuất vượt tồn) | Thủ kho |
 | GET | `/api/goods-issues/{id}` | Chi tiết | Thủ kho, Quản lý kho |
 
-*(Điền chi tiết khi code)*
+**Request `POST /api/goods-issues`**
+```json
+{
+  "issued_date": "2026-08-14T08:00:00Z",
+  "note": "string (tùy chọn)",
+  "items": [
+    {
+      "goods_id": 5,
+      "quantity": 10
+    }
+  ]
+}
+```
+*(Yêu cầu: `quantity` > 0 cho mọi item; `quantity` ≤ `goods.quantity_on_hand` — không cho xuất vượt tồn)*
+
+**Response 200 / 201 (Chi tiết Phiếu xuất mới tạo)**
+```json
+{
+  "id": 1,
+  "created_by": 3,
+  "issued_date": "2026-08-14T08:00:00",
+  "note": "Xuất hàng cho bộ phận sản xuất",
+  "created_at": "2026-08-14T08:00:05",
+  "updated_at": "2026-08-14T08:00:05",
+  "items": [
+    {
+      "id": 1,
+      "issue_id": 1,
+      "goods_id": 5,
+      "quantity": 10
+    }
+  ]
+}
+```
+
+**Response `GET /api/goods-issues` (200 — Phân trang)**
+```json
+{
+  "total": 20,
+  "page": 1,
+  "page_size": 20,
+  "data": [
+    {
+      "id": 1,
+      "created_by": 3,
+      "issued_date": "2026-08-14T08:00:00",
+      "note": null,
+      "created_at": "2026-08-14T08:00:05",
+      "updated_at": "2026-08-14T08:00:05"
+    }
+  ]
+}
+```
+*(Lưu ý: `data` trong danh sách không bao gồm mảng `items` — gọi GET/{id} để lấy chi tiết)*
+
+**Error codes**
+| HTTP | error_code | Trường hợp |
+|---|---|---|
+| 400 | `MISSING_FIELDS` | `items` rỗng hoặc thiếu |
+| 400 | `INVALID_QUANTITY` | `quantity` ≤ 0 trong bất kỳ dòng nào |
+| 400 | `INSUFFICIENT_STOCK` | `quantity` vượt quá tồn kho hiện tại |
+| 400 | `GOODS_INACTIVE` | Hàng hóa đã ngừng kinh doanh |
+| 400 | `INVALID_DATE_FORMAT` | `issued_date` sai định dạng ISO 8601 |
+| 404 | `GOODS_NOT_FOUND` | Không tìm thấy hàng hóa |
+| 404 | `ISSUE_NOT_FOUND` | Không tìm thấy phiếu xuất |
+
+> **Ràng buộc quan trọng**: `goods.quantity_on_hand` chỉ được cập nhật qua transaction (flush → add items → trừ tồn → commit). Nếu bất kỳ bước nào thất bại → rollback toàn bộ. Không cho phép tồn kho âm (`quantity_on_hand` không được giảm xuống dưới 0).
 
 ---
 
