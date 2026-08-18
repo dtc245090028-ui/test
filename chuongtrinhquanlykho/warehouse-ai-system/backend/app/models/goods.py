@@ -42,6 +42,8 @@ class Goods(db.Model):
     """Lịch sử các lần nhập hàng hóa này — dùng tính giá vốn tồn kho"""
     goods_issue_items = db.relationship("GoodsIssueItem", back_populates="goods", lazy="dynamic")
     """Lịch sử các lần xuất hàng hóa này — dùng cho báo cáo AI và tính tốc độ xuất"""
+    stocktake_items = db.relationship("StocktakeItem", back_populates="goods", lazy="dynamic")
+    """Lịch sử các lần kiểm kê hàng hóa này"""
 
     def to_dict(self) -> dict:
         return {

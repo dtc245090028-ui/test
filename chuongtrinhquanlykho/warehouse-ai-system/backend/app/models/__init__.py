@@ -15,3 +15,4 @@ from app.models.goods import Goods
 from app.models.purchase_order import PurchaseOrder, PurchaseOrderItem
 from app.models.goods_receipt import GoodsReceipt, GoodsReceiptItem
 from app.models.goods_issue import GoodsIssue, GoodsIssueItem
+from app.models.stocktake import Stocktake, StocktakeItem

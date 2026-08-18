@@ -141,6 +141,10 @@ def _register_blueprints(app: Flask) -> None:
     from app.routers.goods_issues import goods_issues_bp
     app.register_blueprint(goods_issues_bp)
 
+    # Module Stocktakes (Kiểm kê) — /api/stocktakes
+    from app.routers.stocktakes import stocktakes_bp
+    app.register_blueprint(stocktakes_bp)
+
     app.logger.info("✅ Đã đăng ký tất cả Blueprint.")
 
 

@@ -23,7 +23,7 @@
 | Purchase Orders (Đơn đặt hàng) | ✅ Đã code (2026-08-09) |
 | Goods Receipts (Phiếu nhập) | ✅ Đã code (2026-08-12) |
 | Goods Issues (Phiếu xuất) | ✅ Đã code (2026-08-14) |
-| Stocktakes (Kiểm kê) | ⬜ Chưa điền |
+| Stocktakes (Kiểm kê) | ✅ Đã code (2026-08-18) |
 | Supplier Invoices & Payments (Công nợ) | ⬜ Chưa điền |
 | Reports (Thống kê/báo cáo) | ⬜ Chưa điền |
 | AI Features | ⬜ Chưa điền |
@@ -468,7 +468,68 @@
 | PUT | `/api/stocktakes/{id}/propose` | Thủ kho đề xuất xử lý chênh lệch | Thủ kho |
 | PUT | `/api/stocktakes/{id}/approve` | Quản lý kho phê duyệt → cập nhật tồn | Quản lý kho |
 
-*(Điền chi tiết khi code)*
+**Request `POST /api/stocktakes`**
+```json
+{
+  "note": "string (tùy chọn)",
+  "items": [
+    {
+      "goods_id": 5,
+      "actual_quantity": 48
+    }
+  ]
+}
+```
+*(Hệ thống sẽ tự lấy `goods.quantity_on_hand` gán vào `system_quantity` và tính `difference = actual_quantity - system_quantity`. Trạng thái mặc định là "đang kiểm kê")*
+
+**Response 200 / 201 (Chi tiết Phiếu kiểm kê mới tạo)**
+```json
+{
+  "id": 1,
+  "created_by": 3,
+  "approved_by": null,
+  "stocktake_date": "2026-08-18T08:00:00",
+  "status": "đang kiểm kê",
+  "note": "Kiểm kê định kỳ tháng 8",
+  "items": [
+    {
+      "id": 1,
+      "stocktake_id": 1,
+      "goods_id": 5,
+      "system_quantity": 50,
+      "actual_quantity": 48,
+      "difference": -2,
+      "action": null
+    }
+  ]
+}
+```
+
+**Request `PUT /api/stocktakes/{id}/propose`**
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "action": "Thanh lý hàng hỏng do vỡ"
+    }
+  ]
+}
+```
+*(Cập nhật `action` cho các chi tiết chênh lệch và đổi trạng thái thành "chờ phê duyệt")*
+
+**Request `PUT /api/stocktakes/{id}/approve`**
+*(Không có body. Sau khi gọi API này, status đổi thành "đã phê duyệt", và tồn kho được cập nhật thành `actual_quantity` cho từng item)*
+
+**Error codes**
+| HTTP | error_code | Trường hợp |
+|---|---|---|
+| 400 | `MISSING_FIELDS` | `items` rỗng hoặc thiếu |
+| 400 | `INVALID_QUANTITY` | `actual_quantity` < 0 trong bất kỳ dòng nào |
+| 400 | `INVALID_STATUS` | Hành động không hợp lệ ở trạng thái hiện tại |
+| 403 | `UNAUTHORIZED_ACTION` | Không có quyền (ví dụ: Thủ kho cố duyệt phiếu) |
+| 404 | `GOODS_NOT_FOUND` | Không tìm thấy hàng hóa |
+| 404 | `STOCKTAKE_NOT_FOUND` | Không tìm thấy phiếu kiểm kê |
 
 ---
 
