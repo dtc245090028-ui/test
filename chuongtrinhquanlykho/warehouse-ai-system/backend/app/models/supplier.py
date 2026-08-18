@@ -133,12 +133,12 @@ class Supplier(db.Model):
     )
     """Các phiếu nhập từ NCC này"""
 
-    # supplier_invoices = db.relationship(
-    #     "SupplierInvoice",
-    #     back_populates="supplier",
-    #     lazy="dynamic",
-    # )
-    # """Các hóa đơn mua vào từ NCC này"""
+    supplier_invoices = db.relationship(
+        "SupplierInvoice",
+        back_populates="supplier",
+        lazy="dynamic",
+    )
+    """Các hóa đơn mua vào từ NCC này"""
 
     preferred_goods = db.relationship(
         "Goods",

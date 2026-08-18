@@ -145,6 +145,12 @@ def _register_blueprints(app: Flask) -> None:
     from app.routers.stocktakes import stocktakes_bp
     app.register_blueprint(stocktakes_bp)
 
+    # Module Supplier Invoices (Công nợ hóa đơn) — /api/supplier-invoices
+    # Module Supplier Payments (Ghi nhận thanh toán) — /api/supplier-payments
+    from app.routers.supplier_invoices import supplier_invoices_bp, supplier_payments_bp
+    app.register_blueprint(supplier_invoices_bp)
+    app.register_blueprint(supplier_payments_bp)
+
     app.logger.info("✅ Đã đăng ký tất cả Blueprint.")
 
 

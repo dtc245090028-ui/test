@@ -113,6 +113,17 @@ class GoodsReceipt(db.Model):
     cascade='all, delete-orphan': xóa phiếu → xóa theo các dòng items.
     """
 
+    supplier_invoice = db.relationship(
+        "SupplierInvoice",
+        back_populates="receipt",
+        uselist=False,  # quan hệ 1-1: 1 phiếu nhập → tối đa 1 hóa đơn
+    )
+    """
+    Hóa đơn mua vào liên kết với phiếu nhập này (quan hệ 1-1).
+    uselist=False: trả về object đơn lẻ, không phải danh sách.
+    Nếu chưa tạo hóa đơn → trả None.
+    """
+
     def to_dict(self, include_items: bool = False) -> dict:
         """
         Chuyển object thành dict JSON.

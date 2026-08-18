@@ -24,7 +24,7 @@
 | Goods Receipts (Phiếu nhập) | ✅ Đã code (2026-08-12) |
 | Goods Issues (Phiếu xuất) | ✅ Đã code (2026-08-14) |
 | Stocktakes (Kiểm kê) | ✅ Đã code (2026-08-18) |
-| Supplier Invoices & Payments (Công nợ) | ⬜ Chưa điền |
+| Supplier Invoices & Payments (Công nợ) | ✅ Đã code(2026-08-18) |
 | Reports (Thống kê/báo cáo) | ⬜ Chưa điền |
 | AI Features | ⬜ Chưa điền |
 
@@ -537,11 +537,121 @@
 
 | Method | Path | Mô tả | Role |
 |---|---|---|---|
-| GET | `/api/supplier-invoices` | Danh sách, filter theo NCC/trạng thái | Quản lý kho, Ban điều hành |
+| GET | `/api/supplier-invoices` | Danh sách, filter `?supplier_id=&payment_status=` | Quản lý kho, Ban điều hành |
 | POST | `/api/supplier-invoices` | Tạo hóa đơn từ phiếu nhập | Thủ kho, Quản lý kho |
-| POST | `/api/supplier-payments` | Ghi nhận thanh toán | Quản lý kho, Ban điều hành |
+| GET | `/api/supplier-invoices/{id}` | Chi tiết hóa đơn + lịch sử thanh toán | Quản lý kho, Ban điều hành |
+| POST | `/api/supplier-payments` | Ghi nhận thanh toán → tự cập nhật payment_status | Quản lý kho, Ban điều hành |
 
-*(Điền chi tiết khi code)*
+**Request `POST /api/supplier-invoices`**
+```json
+{
+  "supplier_id": 1,
+  "receipt_id": 3,
+  "invoice_number": "INV-2026-001",
+  "issue_date": "2026-08-18T08:00:00Z",
+  "total_amount": 5000000.0
+}
+```
+*(Ràng buộc: `receipt_id` tùy chọn — nếu có thì phải thuộc đúng `supplier_id`; mỗi `receipt_id` chỉ được tạo 1 hóa đơn; `total_amount` > 0; `invoice_number` bắt buộc)*
+
+**Response 200 / 201 (Chi tiết Hóa đơn)**
+```json
+{
+  "id": 1,
+  "supplier_id": 1,
+  "receipt_id": 3,
+  "invoice_number": "INV-2026-001",
+  "issue_date": "2026-08-18T08:00:00",
+  "total_amount": 5000000.0,
+  "paid_amount": 0.0,
+  "payment_status": "chưa thanh toán",
+  "created_at": "2026-08-18T08:00:05",
+  "updated_at": "2026-08-18T08:00:05"
+}
+```
+
+**Response `GET /api/supplier-invoices` (200 — Phân trang)**
+```json
+{
+  "total": 10,
+  "page": 1,
+  "page_size": 20,
+  "data": [
+    {
+      "id": 1,
+      "supplier_id": 1,
+      "receipt_id": 3,
+      "invoice_number": "INV-2026-001",
+      "issue_date": "2026-08-18T08:00:00",
+      "total_amount": 5000000.0,
+      "paid_amount": 2000000.0,
+      "payment_status": "thanh toán một phần"
+    }
+  ]
+}
+```
+
+**Response `GET /api/supplier-invoices/{id}` (200 — Chi tiết + lịch sử thanh toán)**
+```json
+{
+  "id": 1,
+  "supplier_id": 1,
+  "receipt_id": 3,
+  "invoice_number": "INV-2026-001",
+  "issue_date": "2026-08-18T08:00:00",
+  "total_amount": 5000000.0,
+  "paid_amount": 2000000.0,
+  "payment_status": "thanh toán một phần",
+  "payments": [
+    {
+      "id": 1,
+      "invoice_id": 1,
+      "amount": 2000000.0,
+      "payment_date": "2026-08-20T10:00:00",
+      "method": "chuyển khoản"
+    }
+  ]
+}
+```
+
+**Request `POST /api/supplier-payments`**
+```json
+{
+  "invoice_id": 1,
+  "amount": 3000000.0,
+  "payment_date": "2026-08-20T10:00:00Z",
+  "method": "chuyển khoản"
+}
+```
+*(Ràng buộc: `amount` > 0; tổng tiền thanh toán không được vượt quá `total_amount`; hóa đơn đã trạng thái "đã thanh toán" thì không thể thanh toán thêm; sau khi thanh toán nếu `paid_amount >= total_amount` thì tự động đổi `payment_status` → "đã thanh toán")*
+
+**Response `POST /api/supplier-payments` (201)**
+```json
+{
+  "id": 1,
+  "invoice_id": 1,
+  "amount": 3000000.0,
+  "payment_date": "2026-08-20T10:00:00",
+  "method": "chuyển khoản",
+  "invoice_payment_status": "đã thanh toán"
+}
+```
+
+**Error codes**
+| HTTP | error_code | Trường hợp |
+|---|---|---|
+| 400 | `MISSING_FIELDS` | Thiếu trường bắt buộc |
+| 400 | `INVALID_AMOUNT` | `total_amount` hoặc `amount` ≤ 0 |
+| 400 | `OVERPAYMENT` | Tổng thanh toán vượt quá `total_amount` |
+| 400 | `INVOICE_ALREADY_PAID` | Hóa đơn đã thanh toán đủ, không thể thanh toán thêm |
+| 400 | `RECEIPT_ALREADY_INVOICED` | `receipt_id` đã có hóa đơn liên kết |
+| 400 | `RECEIPT_SUPPLIER_MISMATCH` | `receipt_id` không thuộc `supplier_id` đã chọn |
+| 400 | `INVALID_DATE_FORMAT` | `issue_date` / `payment_date` sai định dạng ISO 8601 |
+| 404 | `SUPPLIER_NOT_FOUND` | Không tìm thấy nhà cung cấp |
+| 404 | `RECEIPT_NOT_FOUND` | Không tìm thấy phiếu nhập |
+| 404 | `INVOICE_NOT_FOUND` | Không tìm thấy hóa đơn |
+
+> **Ràng buộc quan trọng**: `paid_amount` không lưu trực tiếp trong bảng mà được tính tổng từ `supplier_payments.amount` mỗi khi cần; `payment_status` cập nhật tự động trong transaction mỗi khi ghi nhận thanh toán. Không cho phép sửa/xóa hóa đơn hay lịch sử thanh toán sau khi đã tạo — chỉ được thêm mới.
 
 ---
 
