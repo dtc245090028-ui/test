@@ -17,3 +17,4 @@ from app.models.goods_receipt import GoodsReceipt, GoodsReceiptItem
 from app.models.goods_issue import GoodsIssue, GoodsIssueItem
 from app.models.stocktake import Stocktake, StocktakeItem
 from app.models.supplier_invoice import SupplierInvoice, SupplierPayment
+from app.models.ai_interaction_log import AIInteractionLog

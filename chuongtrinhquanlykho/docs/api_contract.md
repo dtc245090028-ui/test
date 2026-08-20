@@ -26,7 +26,7 @@
 | Stocktakes (Kiểm kê) | ✅ Đã code (2026-08-18) |
 | Supplier Invoices & Payments (Công nợ) | ✅ Đã code(2026-08-18) |
 | Reports (Thống kê/báo cáo) | ✅ Đã code (2026-08-20) |
-| AI Features | ⬜ Chưa điền |
+| AI Features | ✅ Đã code (2026-08-20) |
 
 Đổi ⬜ → ✅ khi module đã code xong và endpoint khớp đúng với mục dưới đây.
 
@@ -843,3 +843,56 @@ Hàng chưa có lần nhập nào → `avg_cost = 0`.
 
 Lỗi định dạng/timeout → trả `error_code: "AI_RESPONSE_INVALID"` hoặc
 `"AI_TIMEOUT"`, không crash, không hiển thị dữ liệu rác (theo mục 8.4).
+
+---
+
+## 10. AI Features (Trí tuệ nhân tạo)
+
+| Method | Path | Mô tả | Role |
+|---|---|---|---|
+| POST | `/api/ai/inventory-report` | Sinh báo cáo tóm tắt tình trạng tồn kho bằng AI | Quản lý kho, Ban điều hành |
+| POST | `/api/ai/reorder-suggestion` | Sinh gợi ý nhập thêm hàng hóa bằng AI | Thủ kho, Quản lý kho, Ban điều hành |
+
+**Request `POST /api/ai/inventory-report`**
+*(Không có body, hệ thống tự lấy dữ liệu tồn kho hiện tại và gửi lên AI)*
+
+**Response 200**
+```json
+{
+  "summary": "Mô tả ngắn gọn chung về tình hình tồn kho",
+  "low_stock_items": [
+    {
+      "sku": "SP001",
+      "current_qty": 5.0,
+      "min_stock": 10.0
+    }
+  ],
+  "notable_changes": [
+    {
+      "sku": "SP001",
+      "note": "Hàng sắp hết, cần nhập thêm"
+    }
+  ]
+}
+```
+
+**Request `POST /api/ai/reorder-suggestion`**
+*(Không có body, hệ thống tự lấy tồn kho hiện tại và tốc độ xuất trung bình để gửi lên AI)*
+
+**Response 200**
+```json
+{
+  "reorder_suggestions": [
+    {
+      "sku": "SP001",
+      "suggested_quantity": 50.0,
+      "reason": "Số lượng xuất trong 30 ngày qua cao, tồn kho hiện tại đã dưới ngưỡng tối thiểu"
+    }
+  ]
+}
+```
+
+**Error codes**
+| HTTP | error_code | Trường hợp |
+|---|---|---|
+| 500 | `AI_SERVICE_ERROR` | Lỗi khi kết nối hoặc gọi API AI (timeout, sai định dạng response) |

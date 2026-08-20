@@ -155,6 +155,10 @@ def _register_blueprints(app: Flask) -> None:
     from app.routers.reports import reports_bp
     app.register_blueprint(reports_bp)
 
+    # Module AI Features
+    from app.routers.ai_features import ai_features_bp
+    app.register_blueprint(ai_features_bp)
+
     app.logger.info("✅ Đã đăng ký tất cả Blueprint.")
 
 
