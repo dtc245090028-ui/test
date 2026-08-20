@@ -151,6 +151,10 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(supplier_invoices_bp)
     app.register_blueprint(supplier_payments_bp)
 
+    # Module Reports (Thống kê/Báo cáo) — /api/reports/*
+    from app.routers.reports import reports_bp
+    app.register_blueprint(reports_bp)
+
     app.logger.info("✅ Đã đăng ký tất cả Blueprint.")
 
 

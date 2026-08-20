@@ -25,7 +25,7 @@
 | Goods Issues (Phiếu xuất) | ✅ Đã code (2026-08-14) |
 | Stocktakes (Kiểm kê) | ✅ Đã code (2026-08-18) |
 | Supplier Invoices & Payments (Công nợ) | ✅ Đã code(2026-08-18) |
-| Reports (Thống kê/báo cáo) | ⬜ Chưa điền |
+| Reports (Thống kê/báo cáo) | ✅ Đã code (2026-08-20) |
 | AI Features | ⬜ Chưa điền |
 
 Đổi ⬜ → ✅ khi module đã code xong và endpoint khớp đúng với mục dưới đây.
@@ -664,7 +664,155 @@
 | GET | `/api/reports/top-goods` | Top hàng nhập/xuất nhiều nhất | Quản lý kho, Ban điều hành |
 | GET | `/api/reports/stocktake-diff` | Chênh lệch kiểm kê theo kỳ | Quản lý kho, Ban điều hành |
 
-*(Điền chi tiết khi code)*
+---
+
+### 9.1. GET /api/reports/inventory-value
+
+**Query params:**
+| Param | Kiểu | Mô tả |
+|---|---|---|
+| `date_from` | string (ISO 8601) | Từ ngày (lọc phiếu nhập để tính giá bình quân trong kỳ) |
+| `date_to` | string (ISO 8601) | Đến ngày |
+| `category_id` | integer | Lọc theo danh mục hàng hóa |
+
+**Cách tính giá vốn:** `avg_cost = tổng(quantity × unit_price) / tổng(quantity)` từ `goods_receipt_items`.
+Hàng chưa có lần nhập nào → `avg_cost = 0`.
+
+**Response 200:**
+```json
+{
+  "generated_at": "2026-08-20T10:00:00",
+  "filters": { "date_from": null, "date_to": null, "category_id": null },
+  "summary": {
+    "total_items": 10,
+    "total_inventory_value": 12500000.0,
+    "total_quantity_on_hand": 350.0
+  },
+  "items": [
+    {
+      "goods_id": 1, "sku": "SP001", "name": "Sản phẩm A",
+      "category_id": 2, "unit": "Cái",
+      "quantity_on_hand": 50.0, "avg_cost": 25000.0,
+      "inventory_value": 1250000.0, "min_stock": 10, "max_stock": 100
+    }
+  ]
+}
+```
+
+---
+
+### 9.2. GET /api/reports/turnover
+
+**Query params:**
+| Param | Kiểu | Mô tả | Mặc định |
+|---|---|---|---|
+| `date_from` | string | Từ ngày | — |
+| `date_to` | string | Đến ngày | — |
+| `category_id` | integer | Lọc danh mục | — |
+| `slow_moving_threshold` | float | Ngưỡng vòng quay để xác định slow-moving | `0.5` |
+
+**Công thức:** `turnover_rate = tổng_xuất / quantity_on_hand`. Nếu `quantity_on_hand = 0` → `turnover_rate = null`.
+`is_slow_moving = true` khi `turnover_rate < slow_moving_threshold`.
+
+**Response 200:**
+```json
+{
+  "generated_at": "...",
+  "filters": { "date_from": null, "date_to": null, "category_id": null },
+  "slow_moving_threshold": 0.5,
+  "summary": {
+    "total_items": 10, "slow_moving_count": 3, "total_issued_qty": 500.0
+  },
+  "items": [
+    {
+      "goods_id": 1, "sku": "SP001", "name": "...", "unit": "Cái",
+      "quantity_on_hand": 100.0, "total_issued_qty": 20.0,
+      "turnover_rate": 0.2, "is_slow_moving": true, "min_stock": 10
+    }
+  ]
+}
+```
+*Lưu ý: `items` được sắp xếp: slow-moving lên đầu, trong nhóm theo `turnover_rate` tăng dần.*
+
+---
+
+### 9.3. GET /api/reports/top-goods
+
+**Query params:**
+| Param | Kiểu | Mô tả | Mặc định |
+|---|---|---|---|
+| `date_from` | string | Từ ngày | — |
+| `date_to` | string | Đến ngày | — |
+| `top_n` | integer > 0 | Số lượng top | `10` |
+| `type` | `receipt` / `issue` / `both` | Loại thống kê | `both` |
+
+**Response 200 (type=both):**
+```json
+{
+  "generated_at": "...",
+  "filters": { "date_from": null, "date_to": null, "top_n": 10, "type": "both" },
+  "top_receipt": [
+    { "rank": 1, "goods_id": 5, "sku": "SP005", "name": "...", "unit": "Cái",
+      "total_qty": 500.0, "total_transactions": 3 }
+  ],
+  "top_issue": [
+    { "rank": 1, "goods_id": 3, "sku": "SP003", "name": "...", "unit": "Cái",
+      "total_qty": 200.0, "total_transactions": 8 }
+  ]
+}
+```
+*Nếu `type=receipt` → chỉ trả `top_receipt`. Nếu `type=issue` → chỉ trả `top_issue`.*
+
+---
+
+### 9.4. GET /api/reports/stocktake-diff
+
+**Query params:**
+| Param | Kiểu | Mô tả |
+|---|---|---|
+| `date_from` | string | Từ ngày (lọc theo `stocktake_date`) |
+| `date_to` | string | Đến ngày |
+| `goods_id` | integer | Lọc theo mặt hàng cụ thể |
+| `has_diff` | `true` / `false` | Lọc chỉ dòng có chênh lệch ≠ 0 hoặc = 0 |
+
+*Chỉ tổng hợp phiếu kiểm kê có `status = "đã phê duyệt"`.*
+
+**Response 200:**
+```json
+{
+  "generated_at": "...",
+  "filters": { "date_from": null, "date_to": null, "goods_id": null, "has_diff": null },
+  "summary": {
+    "total_stocktakes": 2, "total_items_checked": 15,
+    "items_with_diff": 4, "total_shortage": -8.0, "total_surplus": 2.0
+  },
+  "stocktakes": [
+    {
+      "stocktake_id": 1,
+      "stocktake_date": "2026-08-18T08:00:00",
+      "status": "đã phê duyệt",
+      "items": [
+        {
+          "goods_id": 5, "sku": "SP005", "name": "...", "unit": "Cái",
+          "system_quantity": 50.0, "actual_quantity": 48.0,
+          "difference": -2.0, "action": "Thanh lý hàng hỏng"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Error codes chung cho tất cả Reports endpoint:**
+| HTTP | error_code | Trường hợp |
+|---|---|---|
+| 400 | `INVALID_DATE_FORMAT` | `date_from` / `date_to` sai định dạng ISO 8601 |
+| 400 | `INVALID_PARAM` | `top_n` ≤ 0; `type` không hợp lệ; `slow_moving_threshold` không phải số |
+| 401 | `TOKEN_MISSING` | Không có Authorization header |
+| 401 | `TOKEN_EXPIRED` | Token hết hạn |
+| 403 | `FORBIDDEN` | Không đủ quyền (warehouse_keeper không được gọi) |
+
+
 
 ---
 
