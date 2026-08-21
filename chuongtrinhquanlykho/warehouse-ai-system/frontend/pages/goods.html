@@ -1,0 +1,368 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hàng hóa — Quản lý Kho</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div id="main-wrapper">
+    <div id="topbar-container"></div>
+    <main id="page-content">
+
+      <!-- Bộ lọc -->
+      <div class="card mb-3">
+        <div class="card-body py-2">
+          <div class="row g-2 align-items-center">
+            <div class="col-12 col-md-4">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" id="search-input" class="form-control" placeholder="Tìm theo tên, SKU..."/>
+              </div>
+            </div>
+            <div class="col-6 col-md-2">
+              <select id="status-filter" class="form-select form-select-sm">
+                <option value="">Tất cả trạng thái</option>
+                <option value="active">Đang kinh doanh</option>
+                <option value="inactive">Ngừng kinh doanh</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-auto">
+              <div class="form-check form-check-inline mb-0">
+                <input class="form-check-input" type="checkbox" id="low-stock-only"/>
+                <label class="form-check-label small" for="low-stock-only">Dưới ngưỡng Min</label>
+              </div>
+            </div>
+            <div class="col-auto ms-md-auto" data-roles="admin,warehouse_manager">
+              <button class="btn btn-primary btn-sm" id="btn-add">
+                <i class="bi bi-plus-lg me-1"></i>Thêm hàng hóa
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bảng hàng hóa -->
+      <div class="card">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>SKU</th>
+                  <th>Tên hàng hóa</th>
+                  <th class="d-none d-md-table-cell">Đơn vị</th>
+                  <th>Tồn kho</th>
+                  <th class="d-none d-lg-table-cell">Min / Max</th>
+                  <th>Trạng thái</th>
+                  <th class="table-actions">Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="goods-tbody">
+                <tr><td colspan="7" class="text-center py-4 text-muted">Đang tải dữ liệu...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer d-flex align-items-center gap-2 flex-wrap">
+          <div id="pagination-container"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Thêm/Sửa Hàng hóa -->
+  <div class="modal fade" id="goods-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="goods-modal-title">Thêm hàng hóa</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="form-error" class="alert alert-danger d-none py-2"></div>
+          <form id="goods-form" novalidate>
+            <input type="hidden" id="goods-id"/>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label required">Mã SKU</label>
+                <input type="text" id="f-sku" class="form-control" placeholder="VD: SP001" required/>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label required">Tên hàng hóa</label>
+                <input type="text" id="f-name" class="form-control" placeholder="Tên sản phẩm" required/>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label required">Danh mục (ID)</label>
+                <input type="number" id="f-category" class="form-control" placeholder="ID danh mục" min="1" required/>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label required">Đơn vị tính</label>
+                <input type="text" id="f-unit" class="form-control" placeholder="Cái / Hộp / kg..." required/>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">NCC ưu tiên (ID)</label>
+                <input type="number" id="f-supplier" class="form-control" placeholder="ID nhà cung cấp"/>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Tồn tối thiểu (Min)</label>
+                <input type="number" id="f-min" class="form-control" value="0" min="0"/>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Tồn tối đa (Max)</label>
+                <input type="number" id="f-max" class="form-control" placeholder="Để trống nếu không giới hạn" min="0"/>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Giá bán (VND)</label>
+                <input type="number" id="f-price" class="form-control" value="0" min="0"/>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Mô tả</label>
+                <textarea id="f-desc" class="form-control" rows="2" placeholder="Mô tả sản phẩm..."></textarea>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label">URL hình ảnh</label>
+                <input type="url" id="f-image" class="form-control" placeholder="https://..."/>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Trạng thái</label>
+                <select id="f-status" class="form-select">
+                  <option value="active">Đang kinh doanh</option>
+                  <option value="inactive">Ngừng kinh doanh</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="button" class="btn btn-primary" id="btn-save">
+            <span id="save-spinner" class="spinner-border spinner-border-sm me-1 d-none"></span>Lưu
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal chi tiết -->
+  <div class="modal fade" id="detail-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Chi tiết hàng hóa</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="detail-body">Đang tải...</div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/layout.js"></script>
+  <script>
+    /* ========= Quản lý Hàng hóa ========= */
+    let currentPage = 1;
+    const PAGE_SIZE = 20;
+    let isLowStockMode = false;
+    const goodsModal  = new bootstrap.Modal(document.getElementById('goods-modal'));
+    const detailModal = new bootstrap.Modal(document.getElementById('detail-modal'));
+
+    /* Tải danh sách hàng hóa */
+    async function loadGoods(page = 1) {
+      currentPage = page;
+      const search = document.getElementById('search-input').value.trim();
+      const status = document.getElementById('status-filter').value;
+      isLowStockMode = document.getElementById('low-stock-only').checked;
+
+      document.getElementById('goods-tbody').innerHTML =
+        '<tr><td colspan="7" class="text-center py-4 text-muted">Đang tải...</td></tr>';
+
+      try {
+        const endpoint = isLowStockMode ? '/goods/low-stock' : '/goods';
+        const data = await api.get(endpoint, { search, status, page, page_size: PAGE_SIZE });
+        renderTable(data.data || []);
+        utils.renderPagination('pagination-container', data.total, page, PAGE_SIZE, loadGoods);
+      } catch (err) {
+        document.getElementById('goods-tbody').innerHTML =
+          `<tr><td colspan="7" class="text-center py-4 text-danger">
+            <i class="bi bi-exclamation-circle me-2"></i>Lỗi: ${utils.escapeHtml(err.message)}
+          </td></tr>`;
+      }
+    }
+
+    /* Render bảng */
+    function renderTable(items) {
+      if (!items.length) {
+        document.getElementById('goods-tbody').innerHTML =
+          '<tr><td colspan="7" class="text-center py-4 text-muted">Không có dữ liệu</td></tr>';
+        return;
+      }
+      const canEdit = auth.hasRole(['admin','warehouse_manager']);
+
+      document.getElementById('goods-tbody').innerHTML = items.map(g => {
+        const isLow = g.quantity_on_hand < g.min_stock;
+        const qtyClass = isLow ? 'stock-low' : 'stock-ok';
+        const lowBadge = isLow ? '<span class="badge bg-danger ms-1">Thiếu hàng</span>' : '';
+        return `
+          <tr>
+            <td><code>${utils.escapeHtml(g.sku)}</code></td>
+            <td>${utils.escapeHtml(g.name)}${lowBadge}</td>
+            <td class="d-none d-md-table-cell">${utils.escapeHtml(g.unit || '—')}</td>
+            <td class="${qtyClass} fw-bold">${utils.formatQty(g.quantity_on_hand)}</td>
+            <td class="d-none d-lg-table-cell text-muted small">${utils.formatQty(g.min_stock)} / ${g.max_stock != null ? utils.formatQty(g.max_stock) : '∞'}</td>
+            <td>${utils.statusBadge(g.status)}</td>
+            <td class="table-actions">
+              <button class="btn btn-outline-secondary btn-sm" onclick="viewDetail(${g.id})" title="Chi tiết">
+                <i class="bi bi-eye"></i>
+              </button>
+              ${canEdit ? `<button class="btn btn-outline-primary btn-sm ms-1" onclick="openEdit(${g.id})" title="Sửa">
+                <i class="bi bi-pencil"></i>
+              </button>` : ''}
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    /* Xem chi tiết */
+    async function viewDetail(id) {
+      document.getElementById('detail-body').innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div></div>';
+      detailModal.show();
+      try {
+        const g = await api.get(`/goods/${id}`);
+        const isLow = g.quantity_on_hand < g.min_stock;
+        document.getElementById('detail-body').innerHTML = `
+          <div class="row">
+            <div class="col-md-6">
+              <table class="table table-borderless mb-0 small">
+                <tr><th>SKU:</th><td><code>${utils.escapeHtml(g.sku)}</code></td></tr>
+                <tr><th>Tên:</th><td>${utils.escapeHtml(g.name)}</td></tr>
+                <tr><th>Danh mục ID:</th><td>${g.category_id}</td></tr>
+                <tr><th>NCC ưu tiên ID:</th><td>${g.preferred_supplier_id || '—'}</td></tr>
+                <tr><th>Đơn vị:</th><td>${utils.escapeHtml(g.unit)}</td></tr>
+              </table>
+            </div>
+            <div class="col-md-6">
+              <table class="table table-borderless mb-0 small">
+                <tr><th>Tồn kho:</th>
+                    <td class="${isLow ? 'stock-low fw-bold' : 'stock-ok'}">${utils.formatQty(g.quantity_on_hand)} ${isLow ? '<span class="badge bg-danger">Dưới ngưỡng</span>' : ''}</td></tr>
+                <tr><th>Min / Max:</th><td>${utils.formatQty(g.min_stock)} / ${g.max_stock != null ? utils.formatQty(g.max_stock) : '∞'}</td></tr>
+                <tr><th>Giá bán:</th><td>${utils.formatCurrency(g.selling_price)}</td></tr>
+                <tr><th>Trạng thái:</th><td>${utils.statusBadge(g.status)}</td></tr>
+              </table>
+            </div>
+            ${g.description ? `<div class="col-12"><hr/><small class="text-muted">Mô tả: ${utils.escapeHtml(g.description)}</small></div>` : ''}
+          </div>`;
+      } catch (err) {
+        document.getElementById('detail-body').innerHTML = `<div class="text-danger">Lỗi: ${utils.escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    /* Mở modal thêm mới */
+    document.getElementById('btn-add')?.addEventListener('click', () => {
+      document.getElementById('goods-modal-title').textContent = 'Thêm hàng hóa mới';
+      document.getElementById('goods-form').reset();
+      document.getElementById('goods-id').value = '';
+      document.getElementById('f-min').value = '0';
+      document.getElementById('f-price').value = '0';
+      document.getElementById('form-error').classList.add('d-none');
+      goodsModal.show();
+    });
+
+    /* Mở modal sửa */
+    async function openEdit(id) {
+      document.getElementById('goods-modal-title').textContent = 'Cập nhật hàng hóa';
+      document.getElementById('form-error').classList.add('d-none');
+      goodsModal.show();
+      try {
+        const g = await api.get(`/goods/${id}`);
+        document.getElementById('goods-id').value  = g.id;
+        document.getElementById('f-sku').value      = g.sku || '';
+        document.getElementById('f-name').value     = g.name || '';
+        document.getElementById('f-category').value = g.category_id || '';
+        document.getElementById('f-unit').value     = g.unit || '';
+        document.getElementById('f-supplier').value = g.preferred_supplier_id || '';
+        document.getElementById('f-min').value      = g.min_stock ?? 0;
+        document.getElementById('f-max').value      = g.max_stock ?? '';
+        document.getElementById('f-price').value    = g.selling_price ?? 0;
+        document.getElementById('f-desc').value     = g.description || '';
+        document.getElementById('f-image').value    = g.image_url || '';
+        document.getElementById('f-status').value   = g.status || 'active';
+      } catch (err) {
+        goodsModal.hide();
+        utils.showToast('Không thể tải thông tin hàng hóa: ' + err.message, 'danger');
+      }
+    }
+
+    /* Lưu */
+    document.getElementById('btn-save').addEventListener('click', async () => {
+      const id  = document.getElementById('goods-id').value;
+      const sku = document.getElementById('f-sku').value.trim();
+      const name = document.getElementById('f-name').value.trim();
+      const categoryId = document.getElementById('f-category').value;
+      const unit = document.getElementById('f-unit').value.trim();
+      const errDiv = document.getElementById('form-error');
+      errDiv.classList.add('d-none');
+
+      if (!sku || !name || !categoryId || !unit) {
+        errDiv.textContent = 'Vui lòng điền đầy đủ: SKU, Tên, Danh mục, Đơn vị.';
+        errDiv.classList.remove('d-none');
+        return;
+      }
+
+      const body = {
+        sku, name,
+        category_id: parseInt(categoryId),
+        unit,
+        preferred_supplier_id: document.getElementById('f-supplier').value ? parseInt(document.getElementById('f-supplier').value) : null,
+        min_stock:     parseFloat(document.getElementById('f-min').value) || 0,
+        max_stock:     document.getElementById('f-max').value ? parseFloat(document.getElementById('f-max').value) : null,
+        selling_price: parseFloat(document.getElementById('f-price').value) || 0,
+        description:   document.getElementById('f-desc').value.trim() || null,
+        image_url:     document.getElementById('f-image').value.trim() || null,
+        status:        document.getElementById('f-status').value,
+      };
+
+      document.getElementById('save-spinner').classList.remove('d-none');
+      document.getElementById('btn-save').disabled = true;
+
+      try {
+        if (id) {
+          await api.put(`/goods/${id}`, body);
+          utils.showToast('Cập nhật hàng hóa thành công!', 'success');
+        } else {
+          await api.post('/goods', body);
+          utils.showToast('Thêm hàng hóa thành công!', 'success');
+        }
+        goodsModal.hide();
+        loadGoods(currentPage);
+      } catch (err) {
+        errDiv.textContent = 'Lỗi: ' + err.message;
+        errDiv.classList.remove('d-none');
+      } finally {
+        document.getElementById('save-spinner').classList.add('d-none');
+        document.getElementById('btn-save').disabled = false;
+      }
+    });
+
+    /* Filter events */
+    document.getElementById('search-input').addEventListener('input', utils.debounce(() => loadGoods(1), 400));
+    document.getElementById('status-filter').addEventListener('change', () => loadGoods(1));
+    document.getElementById('low-stock-only').addEventListener('change', () => loadGoods(1));
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setPageTitle('Hàng hóa');
+      loadGoods(1);
+    });
+  </script>
+</body>
+</html>

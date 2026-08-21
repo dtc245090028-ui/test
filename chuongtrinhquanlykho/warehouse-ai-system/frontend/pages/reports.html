@@ -1,0 +1,315 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Báo cáo thống kê — Quản lý Kho</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    .report-card { transition: all 0.2s; cursor: pointer; }
+    .report-card:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; border-color: #0d6efd; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div id="main-wrapper">
+    <div id="topbar-container"></div>
+    <main id="page-content">
+      
+      <!-- Danh mục báo cáo -->
+      <div class="row g-4 mb-4" id="report-menu">
+        <div class="col-md-3">
+          <div class="card h-100 shadow-sm report-card border-primary" onclick="showReport('inventory-value')">
+            <div class="card-body text-center">
+              <i class="bi bi-cash-stack fs-1 text-primary mb-2"></i>
+              <h6 class="card-title fw-bold">Giá trị tồn kho</h6>
+              <p class="text-muted small mb-0">Thống kê giá vốn, tổng giá trị hàng tồn.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card h-100 shadow-sm report-card" onclick="showReport('turnover')">
+            <div class="card-body text-center">
+              <i class="bi bi-arrow-repeat fs-1 text-success mb-2"></i>
+              <h6 class="card-title fw-bold">Vòng quay tồn kho</h6>
+              <p class="text-muted small mb-0">Hàng chậm luân chuyển (slow-moving).</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card h-100 shadow-sm report-card" onclick="showReport('top-goods')">
+            <div class="card-body text-center">
+              <i class="bi bi-graph-up fs-1 text-warning mb-2"></i>
+              <h6 class="card-title fw-bold">Top hàng hóa</h6>
+              <p class="text-muted small mb-0">Nhập/xuất nhiều nhất theo kỳ.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card h-100 shadow-sm report-card" onclick="showReport('stocktake-diff')">
+            <div class="card-body text-center">
+              <i class="bi bi-clipboard-data fs-1 text-danger mb-2"></i>
+              <h6 class="card-title fw-bold">Chênh lệch kiểm kê</h6>
+              <p class="text-muted small mb-0">Lịch sử hàng thừa/thiếu khi đếm thực tế.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Khu vực hiển thị kết quả báo cáo -->
+      <div class="card shadow-sm d-none" id="report-result-card">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+          <h5 class="mb-0 fw-bold text-primary" id="report-title">Tên báo cáo</h5>
+          <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>In báo cáo
+          </button>
+        </div>
+        <div class="card-body bg-light border-bottom" id="report-filters">
+          <!-- Filters inject here -->
+        </div>
+        <div class="card-body">
+          <div id="report-error" class="alert alert-danger d-none"></div>
+          <div id="report-loading" class="text-center py-5 d-none">
+            <div class="spinner-border text-primary" role="status"></div>
+            <div class="mt-2 text-muted">Đang trích xuất dữ liệu...</div>
+          </div>
+          <div id="report-content"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/layout.js"></script>
+  <script>
+    let currentReport = '';
+
+    function showReport(type) {
+      currentReport = type;
+      // Đổi style menu active
+      document.querySelectorAll('.report-card').forEach(c => c.classList.remove('border-primary'));
+      event.currentTarget.classList.add('border-primary');
+
+      const card = document.getElementById('report-result-card');
+      card.classList.remove('d-none');
+      document.getElementById('report-error').classList.add('d-none');
+      document.getElementById('report-content').innerHTML = '';
+
+      const today = new Date().toISOString().split('T')[0];
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+
+      let filterHtml = '';
+      if (type === 'inventory-value') {
+        document.getElementById('report-title').innerHTML = '<i class="bi bi-cash-stack me-2"></i>Báo cáo Giá trị Tồn kho';
+        filterHtml = `
+          <div class="row g-2">
+            <div class="col-md-3"><label class="small text-muted">Từ ngày (tính giá vốn)</label><input type="date" id="f-from" class="form-control form-control-sm" value="${startOfMonth}"></div>
+            <div class="col-md-3"><label class="small text-muted">Đến ngày</label><input type="date" id="f-to" class="form-control form-control-sm" value="${today}"></div>
+            <div class="col-md-3"><label class="small text-muted">Danh mục (ID)</label><input type="number" id="f-cat" class="form-control form-control-sm" placeholder="Tất cả"></div>
+            <div class="col-md-3 d-flex align-items-end"><button class="btn btn-primary btn-sm w-100" onclick="loadReportData()"><i class="bi bi-funnel me-1"></i>Lọc dữ liệu</button></div>
+          </div>`;
+      } else if (type === 'turnover') {
+        document.getElementById('report-title').innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>Báo cáo Vòng quay / Hàng chậm luân chuyển';
+        filterHtml = `
+          <div class="row g-2">
+            <div class="col-md-3"><label class="small text-muted">Từ ngày</label><input type="date" id="f-from" class="form-control form-control-sm" value="${startOfMonth}"></div>
+            <div class="col-md-3"><label class="small text-muted">Đến ngày</label><input type="date" id="f-to" class="form-control form-control-sm" value="${today}"></div>
+            <div class="col-md-3"><label class="small text-muted">Ngưỡng chậm (mặc định 0.5)</label><input type="number" step="0.1" id="f-threshold" class="form-control form-control-sm" value="0.5"></div>
+            <div class="col-md-3 d-flex align-items-end"><button class="btn btn-primary btn-sm w-100" onclick="loadReportData()"><i class="bi bi-funnel me-1"></i>Lọc dữ liệu</button></div>
+          </div>`;
+      } else if (type === 'top-goods') {
+        document.getElementById('report-title').innerHTML = '<i class="bi bi-graph-up me-2"></i>Báo cáo Top Hàng hóa Nhập/Xuất';
+        filterHtml = `
+          <div class="row g-2">
+            <div class="col-md-3"><label class="small text-muted">Từ ngày</label><input type="date" id="f-from" class="form-control form-control-sm" value="${startOfMonth}"></div>
+            <div class="col-md-3"><label class="small text-muted">Đến ngày</label><input type="date" id="f-to" class="form-control form-control-sm" value="${today}"></div>
+            <div class="col-md-2"><label class="small text-muted">Top N</label><input type="number" id="f-top" class="form-control form-control-sm" value="10"></div>
+            <div class="col-md-2"><label class="small text-muted">Loại</label><select id="f-type" class="form-select form-select-sm"><option value="both">Cả hai</option><option value="receipt">Nhập</option><option value="issue">Xuất</option></select></div>
+            <div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary btn-sm w-100" onclick="loadReportData()"><i class="bi bi-funnel me-1"></i>Lọc</button></div>
+          </div>`;
+      } else if (type === 'stocktake-diff') {
+        document.getElementById('report-title').innerHTML = '<i class="bi bi-clipboard-data me-2"></i>Báo cáo Chênh lệch Kiểm kê';
+        filterHtml = `
+          <div class="row g-2">
+            <div class="col-md-3"><label class="small text-muted">Từ ngày</label><input type="date" id="f-from" class="form-control form-control-sm" value="${startOfMonth}"></div>
+            <div class="col-md-3"><label class="small text-muted">Đến ngày</label><input type="date" id="f-to" class="form-control form-control-sm" value="${today}"></div>
+            <div class="col-md-3"><label class="small text-muted">Lọc theo chênh lệch</label><select id="f-diff" class="form-select form-select-sm"><option value="">Tất cả</option><option value="true">Chỉ hàng có chênh lệch</option></select></div>
+            <div class="col-md-3 d-flex align-items-end"><button class="btn btn-primary btn-sm w-100" onclick="loadReportData()"><i class="bi bi-funnel me-1"></i>Lọc dữ liệu</button></div>
+          </div>`;
+      }
+      document.getElementById('report-filters').innerHTML = filterHtml;
+      loadReportData();
+    }
+
+    async function loadReportData() {
+      const errDiv = document.getElementById('report-error');
+      const loader = document.getElementById('report-loading');
+      const content = document.getElementById('report-content');
+      
+      errDiv.classList.add('d-none');
+      content.innerHTML = '';
+      loader.classList.remove('d-none');
+
+      try {
+        let endpoint = '';
+        let params = {};
+        
+        // Thu thập params chung
+        const dateFrom = document.getElementById('f-from')?.value;
+        const dateTo   = document.getElementById('f-to')?.value;
+        if (dateFrom) params.date_from = dateFrom + 'T00:00:00';
+        if (dateTo)   params.date_to   = dateTo   + 'T23:59:59';
+
+        if (currentReport === 'inventory-value') {
+          endpoint = '/reports/inventory-value';
+          const cat = document.getElementById('f-cat').value;
+          if (cat) params.category_id = cat;
+        } else if (currentReport === 'turnover') {
+          endpoint = '/reports/turnover';
+          const th = document.getElementById('f-threshold').value;
+          if (th) params.slow_moving_threshold = parseFloat(th);
+        } else if (currentReport === 'top-goods') {
+          endpoint = '/reports/top-goods';
+          params.top_n = parseInt(document.getElementById('f-top').value) || 10;
+          params.type = document.getElementById('f-type').value;
+        } else if (currentReport === 'stocktake-diff') {
+          endpoint = '/reports/stocktake-diff';
+          const hd = document.getElementById('f-diff').value;
+          if (hd === 'true') params.has_diff = true;
+        }
+
+        const data = await api.get(endpoint, params);
+        renderReportResult(data);
+      } catch (err) {
+        errDiv.textContent = 'Lỗi trích xuất dữ liệu: ' + err.message;
+        errDiv.classList.remove('d-none');
+      } finally {
+        loader.classList.add('d-none');
+      }
+    }
+
+    function renderReportResult(data) {
+      const content = document.getElementById('report-content');
+      
+      if (currentReport === 'inventory-value') {
+        const sum = data.summary;
+        let html = `
+          <div class="row mb-4 text-center">
+            <div class="col-md-4"><div class="p-3 border rounded bg-white">
+              <div class="text-muted small">Tổng mặt hàng</div>
+              <h3 class="text-primary mb-0">${sum.total_items}</h3>
+            </div></div>
+            <div class="col-md-4"><div class="p-3 border rounded bg-white">
+              <div class="text-muted small">Tổng số lượng tồn</div>
+              <h3 class="text-info mb-0">${utils.formatQty(sum.total_quantity_on_hand)}</h3>
+            </div></div>
+            <div class="col-md-4"><div class="p-3 border rounded bg-white border-primary shadow-sm">
+              <div class="text-muted small fw-bold">Tổng Giá Trị Tồn Kho</div>
+              <h3 class="text-success mb-0">${utils.formatCurrency(sum.total_inventory_value)}</h3>
+            </div></div>
+          </div>
+          <div class="table-responsive"><table class="table table-bordered table-hover table-sm">
+            <thead class="table-light"><tr><th>SKU</th><th>Tên hàng</th><th>Đơn vị</th><th>Số lượng tồn</th><th>Giá vốn BQ</th><th>Giá trị tồn</th></tr></thead>
+            <tbody>
+        `;
+        data.items.forEach(i => {
+          html += `<tr>
+            <td><code>${i.sku}</code></td><td>${utils.escapeHtml(i.name)}</td><td>${i.unit}</td>
+            <td class="fw-bold">${utils.formatQty(i.quantity_on_hand)}</td>
+            <td>${utils.formatCurrency(i.avg_cost)}</td>
+            <td class="text-success fw-bold">${utils.formatCurrency(i.inventory_value)}</td>
+          </tr>`;
+        });
+        html += `</tbody></table></div>`;
+        content.innerHTML = html;
+      } 
+      
+      else if (currentReport === 'turnover') {
+        const sum = data.summary;
+        let html = `
+          <div class="row mb-4 text-center">
+            <div class="col-md-4"><div class="p-3 border rounded bg-white">
+              <div class="text-muted small">Tổng mặt hàng đã lọc</div><h3 class="text-primary mb-0">${sum.total_items}</h3>
+            </div></div>
+            <div class="col-md-4"><div class="p-3 border rounded bg-white border-warning shadow-sm">
+              <div class="text-muted small fw-bold text-warning">Hàng chậm luân chuyển</div><h3 class="text-warning mb-0">${sum.slow_moving_count}</h3>
+            </div></div>
+            <div class="col-md-4"><div class="p-3 border rounded bg-white">
+              <div class="text-muted small">Tổng xuất trong kỳ</div><h3 class="text-info mb-0">${utils.formatQty(sum.total_issued_qty)}</h3>
+            </div></div>
+          </div>
+          <div class="table-responsive"><table class="table table-bordered table-hover table-sm">
+            <thead class="table-light"><tr><th>SKU</th><th>Tên hàng</th><th>SL Tồn</th><th>SL Xuất</th><th>Vòng quay</th><th>Phân loại</th></tr></thead>
+            <tbody>
+        `;
+        data.items.forEach(i => {
+          html += `<tr class="${i.is_slow_moving ? 'table-warning' : ''}">
+            <td><code>${i.sku}</code></td><td>${utils.escapeHtml(i.name)}</td>
+            <td>${utils.formatQty(i.quantity_on_hand)}</td>
+            <td>${utils.formatQty(i.total_issued_qty)}</td>
+            <td class="fw-bold">${i.turnover_rate !== null ? i.turnover_rate.toFixed(2) : 'N/A'}</td>
+            <td>${i.is_slow_moving ? '<span class="badge bg-danger">Chậm luân chuyển</span>' : '<span class="badge bg-success">Tốt</span>'}</td>
+          </tr>`;
+        });
+        html += `</tbody></table></div>`;
+        content.innerHTML = html;
+      }
+
+      else if (currentReport === 'top-goods') {
+        let html = '<div class="row">';
+        if (data.top_receipt) {
+          html += `<div class="col-md-6">
+            <h6 class="text-success"><i class="bi bi-arrow-down-circle me-1"></i>Top Nhập Kho</h6>
+            <table class="table table-sm table-bordered">
+              <thead class="table-light"><tr><th>Hạng</th><th>SKU</th><th>Tên</th><th>Tổng Nhập</th></tr></thead>
+              <tbody>`;
+          data.top_receipt.forEach(i => html += `<tr><td>#${i.rank}</td><td><code>${i.sku}</code></td><td>${utils.escapeHtml(i.name)}</td><td class="fw-bold text-success">+${utils.formatQty(i.total_qty)}</td></tr>`);
+          html += `</tbody></table></div>`;
+        }
+        if (data.top_issue) {
+          html += `<div class="col-md-6">
+            <h6 class="text-danger"><i class="bi bi-arrow-up-circle me-1"></i>Top Xuất Kho</h6>
+            <table class="table table-sm table-bordered">
+              <thead class="table-light"><tr><th>Hạng</th><th>SKU</th><th>Tên</th><th>Tổng Xuất</th></tr></thead>
+              <tbody>`;
+          data.top_issue.forEach(i => html += `<tr><td>#${i.rank}</td><td><code>${i.sku}</code></td><td>${utils.escapeHtml(i.name)}</td><td class="fw-bold text-danger">-${utils.formatQty(i.total_qty)}</td></tr>`);
+          html += `</tbody></table></div>`;
+        }
+        html += '</div>';
+        content.innerHTML = html;
+      }
+
+      else if (currentReport === 'stocktake-diff') {
+        const sum = data.summary;
+        let html = `
+          <div class="row mb-4 text-center">
+            <div class="col-md-3"><div class="p-3 border rounded bg-white"><div class="text-muted small">Số phiếu KK</div><h4 class="mb-0 text-primary">${sum.total_stocktakes}</h4></div></div>
+            <div class="col-md-3"><div class="p-3 border rounded bg-white"><div class="text-muted small">Mặt hàng lệch</div><h4 class="mb-0 text-warning">${sum.items_with_diff}</h4></div></div>
+            <div class="col-md-3"><div class="p-3 border rounded bg-white"><div class="text-muted small">Tổng thiếu</div><h4 class="mb-0 text-danger">${utils.formatQty(sum.total_shortage)}</h4></div></div>
+            <div class="col-md-3"><div class="p-3 border rounded bg-white"><div class="text-muted small">Tổng thừa</div><h4 class="mb-0 text-success">+${utils.formatQty(sum.total_surplus)}</h4></div></div>
+          </div>
+        `;
+        data.stocktakes.forEach(st => {
+          html += `<div class="card mb-3 shadow-sm border-0"><div class="card-header bg-light"><strong>Phiếu kiểm kê #${st.stocktake_id}</strong> - Ngày: ${utils.formatDateTime(st.stocktake_date)}</div><div class="card-body p-0"><table class="table table-sm table-hover mb-0"><thead class="table-secondary"><tr><th>SKU</th><th>Tên hàng</th><th>Hệ thống</th><th>Thực tế</th><th>Chênh lệch</th><th>Xử lý</th></tr></thead><tbody>`;
+          st.items.forEach(i => {
+            const cls = i.difference < 0 ? 'text-danger' : (i.difference > 0 ? 'text-success' : '');
+            html += `<tr><td><code>${i.sku}</code></td><td>${utils.escapeHtml(i.name)}</td><td>${utils.formatQty(i.system_quantity)}</td><td>${utils.formatQty(i.actual_quantity)}</td><td class="${cls} fw-bold">${i.difference > 0 ? '+' : ''}${utils.formatQty(i.difference)}</td><td>${utils.escapeHtml(i.action || '—')}</td></tr>`;
+          });
+          html += `</tbody></table></div></div>`;
+        });
+        if (!data.stocktakes.length) html += '<p class="text-muted text-center py-4">Không tìm thấy dữ liệu.</p>';
+        content.innerHTML = html;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setPageTitle('Báo cáo thống kê');
+    });
+  </script>
+</body>
+</html>

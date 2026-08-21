@@ -1,0 +1,150 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Đăng nhập — Quản lý Kho</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    body { background: linear-gradient(135deg, #1a1d23 0%, #2d3748 100%); }
+    .login-card { border-radius: 12px; overflow: hidden; }
+  </style>
+</head>
+<body class="d-flex align-items-center justify-content-center min-vh-100 p-3">
+
+  <div class="card shadow-lg login-card" style="width:420px;max-width:100%;">
+    <div class="card-header bg-primary text-white text-center py-4 border-0">
+      <i class="bi bi-boxes" style="font-size:2.5rem;"></i>
+      <h4 class="mt-2 mb-0 fw-bold">Quản lý Kho</h4>
+      <small class="opacity-75">Hệ thống quản lý hàng hóa tích hợp AI</small>
+    </div>
+
+    <div class="card-body p-4">
+      <!-- Thông báo lỗi -->
+      <div id="login-error" class="alert alert-danger d-none py-2" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span id="login-error-msg"></span>
+      </div>
+
+      <form id="login-form" novalidate>
+        <div class="mb-3">
+          <label for="username" class="form-label fw-semibold">
+            <i class="bi bi-person-fill me-1"></i>Tên đăng nhập
+          </label>
+          <input type="text" id="username" class="form-control" placeholder="Nhập tên đăng nhập"
+                 autocomplete="username" required/>
+        </div>
+        <div class="mb-4">
+          <label for="password" class="form-label fw-semibold">
+            <i class="bi bi-lock-fill me-1"></i>Mật khẩu
+          </label>
+          <div class="input-group">
+            <input type="password" id="password" class="form-control" placeholder="Nhập mật khẩu"
+                   autocomplete="current-password" required/>
+            <button class="btn btn-outline-secondary" type="button" id="toggle-pwd" title="Hiện/ẩn mật khẩu">
+              <i class="bi bi-eye" id="toggle-icon"></i>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" id="login-btn">
+          <span id="login-spinner" class="spinner-border spinner-border-sm me-2 d-none"></span>
+          <i class="bi bi-box-arrow-in-right me-1" id="login-icon"></i>
+          Đăng nhập
+        </button>
+      </form>
+    </div>
+
+    <div class="card-footer text-center text-muted small py-3 bg-light">
+      &copy; 2026 Warehouse AI System &mdash; Đồ án môn học
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    /* Nếu đã có token → redirect ngay vào dashboard */
+    if (localStorage.getItem('access_token')) {
+      window.location.href = 'dashboard.html';
+    }
+
+    /* Toggle hiển thị mật khẩu */
+    document.getElementById('toggle-pwd').addEventListener('click', function () {
+      const pwd = document.getElementById('password');
+      const icon = document.getElementById('toggle-icon');
+      if (pwd.type === 'password') {
+        pwd.type = 'text';
+        icon.classList.replace('bi-eye', 'bi-eye-slash');
+      } else {
+        pwd.type = 'password';
+        icon.classList.replace('bi-eye-slash', 'bi-eye');
+      }
+    });
+
+    /* Hiển thị thông báo lỗi */
+    function showError(msg) {
+      document.getElementById('login-error-msg').textContent = msg;
+      document.getElementById('login-error').classList.remove('d-none');
+    }
+
+    /* Dịch error_code sang thông báo tiếng Việt */
+    function translateError(err) {
+      const map = {
+        INVALID_CREDENTIALS: 'Sai tên đăng nhập hoặc mật khẩu.',
+        ACCOUNT_INACTIVE: 'Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.',
+        MISSING_FIELDS: 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.',
+      };
+      return map[err.error_code] || err.message || 'Đã xảy ra lỗi, vui lòng thử lại.';
+    }
+
+    /* Xử lý submit form đăng nhập */
+    document.getElementById('login-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      document.getElementById('login-error').classList.add('d-none');
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !password) {
+        showError('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.');
+        return;
+      }
+
+      /* Hiện spinner */
+      const loginBtn = document.getElementById('login-btn');
+      document.getElementById('login-spinner').classList.remove('d-none');
+      document.getElementById('login-icon').classList.add('d-none');
+      loginBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          const err = new Error(data.message || 'Login failed');
+          err.error_code = data.error_code;
+          throw err;
+        }
+
+        /* Lưu thông tin đăng nhập vào localStorage */
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('user_role', data.role);
+        localStorage.setItem('user_info', JSON.stringify(data.user));
+
+        /* Redirect vào dashboard */
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        showError(translateError(err));
+      } finally {
+        document.getElementById('login-spinner').classList.add('d-none');
+        document.getElementById('login-icon').classList.remove('d-none');
+        loginBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,280 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Phiếu xuất kho — Quản lý Kho</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div id="main-wrapper">
+    <div id="topbar-container"></div>
+    <main id="page-content">
+      <div class="card mb-3">
+        <div class="card-body py-2">
+          <div class="row g-2 align-items-center">
+            <div class="col-6 col-md-3">
+              <input type="date" id="date-from" class="form-control form-control-sm" placeholder="Từ ngày"/>
+            </div>
+            <div class="col-6 col-md-3">
+              <input type="date" id="date-to" class="form-control form-control-sm" placeholder="Đến ngày"/>
+            </div>
+            <div class="col-auto ms-md-auto">
+              <button class="btn btn-danger btn-sm" id="btn-add">
+                <i class="bi bi-plus-lg me-1"></i>Lập phiếu xuất
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Mã phiếu</th>
+                  <th>Ngày xuất</th>
+                  <th class="d-none d-md-table-cell">Người lập</th>
+                  <th class="d-none d-lg-table-cell">Ghi chú</th>
+                  <th class="table-actions">Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="issues-tbody">
+                <tr><td colspan="5" class="text-center py-4 text-muted">Đang tải...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer"><div id="pagination-container"></div></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Lập phiếu xuất -->
+  <div class="modal fade" id="issue-modal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Lập phiếu xuất kho</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="form-error" class="alert alert-danger d-none py-2"></div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label required">Ngày xuất hàng</label>
+              <input type="datetime-local" id="f-date" class="form-control" required/>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Ghi chú</label>
+              <input type="text" id="f-note" class="form-control" placeholder="Mục đích xuất kho, bộ phận nhận hàng..."/>
+            </div>
+          </div>
+          <hr/>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>Danh sách hàng xuất</strong>
+            <button type="button" class="btn btn-sm btn-outline-danger" id="btn-add-item">
+              <i class="bi bi-plus-lg me-1"></i>Thêm dòng
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-bordered table-sm">
+              <thead class="table-light">
+                <tr><th>ID Hàng hóa</th><th>Số lượng xuất</th><th style="width:50px"></th></tr>
+              </thead>
+              <tbody id="items-tbody"></tbody>
+            </table>
+          </div>
+          <div class="alert alert-warning py-2 small mt-2">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Hệ thống sẽ tự động kiểm tra tồn kho. Không thể xuất vượt quá số lượng hiện có.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="button" class="btn btn-danger" id="btn-save">
+            <span id="save-spinner" class="spinner-border spinner-border-sm me-1 d-none"></span>Lập phiếu xuất
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal chi tiết -->
+  <div class="modal fade" id="detail-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="detail-title">Chi tiết phiếu xuất</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="detail-body">Đang tải...</div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/layout.js"></script>
+  <script>
+    /* ========= Phiếu xuất kho ========= */
+    let currentPage = 1;
+    const PAGE_SIZE = 20;
+    const issueModal  = new bootstrap.Modal(document.getElementById('issue-modal'));
+    const detailModal = new bootstrap.Modal(document.getElementById('detail-modal'));
+
+    async function loadIssues(page = 1) {
+      currentPage = page;
+      const date_from = document.getElementById('date-from').value;
+      const date_to   = document.getElementById('date-to').value;
+      document.getElementById('issues-tbody').innerHTML =
+        '<tr><td colspan="5" class="text-center py-4 text-muted">Đang tải...</td></tr>';
+      try {
+        const params = { page, page_size: PAGE_SIZE };
+        if (date_from) params.date_from = date_from + 'T00:00:00';
+        if (date_to)   params.date_to   = date_to   + 'T23:59:59';
+        const data = await api.get('/goods-issues', params);
+        renderTable(data.data || []);
+        utils.renderPagination('pagination-container', data.total, page, PAGE_SIZE, loadIssues);
+      } catch (err) {
+        document.getElementById('issues-tbody').innerHTML =
+          `<tr><td colspan="5" class="text-danger text-center py-4">Lỗi: ${utils.escapeHtml(err.message)}</td></tr>`;
+      }
+    }
+
+    function renderTable(items) {
+      if (!items.length) {
+        document.getElementById('issues-tbody').innerHTML =
+          '<tr><td colspan="5" class="text-center py-4 text-muted">Không có dữ liệu</td></tr>';
+        return;
+      }
+      document.getElementById('issues-tbody').innerHTML = items.map(r => `
+        <tr>
+          <td><strong>#${r.id}</strong></td>
+          <td>${utils.formatDate(r.issued_date)}</td>
+          <td class="d-none d-md-table-cell">${r.created_by}</td>
+          <td class="d-none d-lg-table-cell">${utils.truncate(r.note || '—', 40)}</td>
+          <td class="table-actions">
+            <button class="btn btn-outline-secondary btn-sm" onclick="viewDetail(${r.id})" title="Chi tiết">
+              <i class="bi bi-eye"></i>
+            </button>
+          </td>
+        </tr>`).join('');
+    }
+
+    async function viewDetail(id) {
+      document.getElementById('detail-body').innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div></div>';
+      document.getElementById('detail-title').textContent = `Phiếu xuất #${id}`;
+      detailModal.show();
+      try {
+        const r = await api.get(`/goods-issues/${id}`);
+        const itemsHtml = (r.items || []).map((it, i) => `
+          <tr><td>${i+1}</td><td>${it.goods_id}</td><td>${utils.formatQty(it.quantity)}</td></tr>`).join('');
+        document.getElementById('detail-body').innerHTML = `
+          <table class="table table-borderless mb-3 small">
+            <tr><th>Ngày xuất:</th><td>${utils.formatDateTime(r.issued_date)}</td></tr>
+            <tr><th>Người lập:</th><td>${r.created_by}</td></tr>
+            <tr><th>Ghi chú:</th><td>${utils.escapeHtml(r.note || '—')}</td></tr>
+          </table>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+              <thead class="table-light"><tr><th>#</th><th>Hàng hóa ID</th><th>Số lượng xuất</th></tr></thead>
+              <tbody>${itemsHtml}</tbody>
+            </table>
+          </div>`;
+      } catch (err) {
+        document.getElementById('detail-body').innerHTML = `<div class="text-danger">Lỗi: ${utils.escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function addItemRow() {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="number" class="form-control form-control-sm" name="goods_id" min="1" placeholder="ID hàng hóa"/></td>
+        <td><input type="number" class="form-control form-control-sm" name="qty" min="0.001" step="any" value="1" placeholder="Số lượng xuất"/></td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()">
+          <i class="bi bi-trash"></i></button></td>`;
+      document.getElementById('items-tbody').appendChild(tr);
+    }
+
+    document.getElementById('btn-add-item').addEventListener('click', addItemRow);
+
+    document.getElementById('btn-add').addEventListener('click', () => {
+      document.getElementById('f-date').value = new Date().toISOString().slice(0, 16);
+      document.getElementById('f-note').value = '';
+      document.getElementById('items-tbody').innerHTML = '';
+      document.getElementById('form-error').classList.add('d-none');
+      addItemRow();
+      issueModal.show();
+    });
+
+    document.getElementById('btn-save').addEventListener('click', async () => {
+      const date = document.getElementById('f-date').value;
+      const note = document.getElementById('f-note').value.trim();
+      const errDiv = document.getElementById('form-error');
+      errDiv.classList.add('d-none');
+
+      if (!date) {
+        errDiv.textContent = 'Vui lòng nhập Ngày xuất hàng.';
+        errDiv.classList.remove('d-none');
+        return;
+      }
+
+      const rows = document.getElementById('items-tbody').rows;
+      if (!rows.length) {
+        errDiv.textContent = 'Phiếu xuất phải có ít nhất 1 mặt hàng.';
+        errDiv.classList.remove('d-none');
+        return;
+      }
+
+      const items = [];
+      for (const row of rows) {
+        const goods_id = row.querySelector('[name=goods_id]').value;
+        const qty      = parseFloat(row.querySelector('[name=qty]').value);
+        if (!goods_id || isNaN(qty) || qty <= 0) {
+          errDiv.textContent = 'Mỗi dòng phải có ID hàng hóa và số lượng > 0.';
+          errDiv.classList.remove('d-none');
+          return;
+        }
+        items.push({ goods_id: parseInt(goods_id), quantity: qty });
+      }
+
+      document.getElementById('save-spinner').classList.remove('d-none');
+      document.getElementById('btn-save').disabled = true;
+
+      try {
+        const body = { issued_date: new Date(date).toISOString(), items };
+        if (note) body.note = note;
+        await api.post('/goods-issues', body);
+        utils.showToast('Lập phiếu xuất kho thành công! Tồn kho đã được cập nhật.', 'success');
+        issueModal.hide();
+        loadIssues(currentPage);
+      } catch (err) {
+        let msg = err.message;
+        if (err.error_code === 'INSUFFICIENT_STOCK') msg = 'Số lượng xuất vượt quá tồn kho hiện có. Vui lòng kiểm tra lại.';
+        errDiv.textContent = 'Lỗi: ' + msg;
+        errDiv.classList.remove('d-none');
+      } finally {
+        document.getElementById('save-spinner').classList.add('d-none');
+        document.getElementById('btn-save').disabled = false;
+      }
+    });
+
+    document.getElementById('date-from').addEventListener('change', () => loadIssues(1));
+    document.getElementById('date-to').addEventListener('change', () => loadIssues(1));
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setPageTitle('Phiếu xuất kho');
+      loadIssues(1);
+    });
+  </script>
+</body>
+</html>

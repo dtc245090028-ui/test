@@ -1,0 +1,253 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — Quản lý Kho</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div id="sidebar-container"></div>
+
+  <!-- Main wrapper -->
+  <div id="main-wrapper">
+    <!-- Topbar -->
+    <div id="topbar-container"></div>
+
+    <!-- Nội dung chính -->
+    <main id="page-content">
+
+      <!-- Summary cards -->
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+          <div class="card summary-card border-primary h-100">
+            <div class="card-body d-flex justify-content-between align-items-center">
+              <div>
+                <div class="text-muted small">Tổng hàng hóa</div>
+                <div class="card-value" id="total-goods"><span class="skeleton" style="width:60px;height:32px;">&nbsp;</span></div>
+              </div>
+              <i class="bi bi-box-seam card-icon text-primary"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card summary-card border-warning h-100">
+            <div class="card-body d-flex justify-content-between align-items-center">
+              <div>
+                <div class="text-muted small">Dưới ngưỡng Min</div>
+                <div class="card-value text-warning" id="low-stock-count"><span class="skeleton" style="width:40px;height:32px;">&nbsp;</span></div>
+              </div>
+              <i class="bi bi-exclamation-triangle card-icon text-warning"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card summary-card border-success h-100">
+            <div class="card-body d-flex justify-content-between align-items-center">
+              <div>
+                <div class="text-muted small">Phiếu nhập hôm nay</div>
+                <div class="card-value text-success" id="receipts-today"><span class="skeleton" style="width:40px;height:32px;">&nbsp;</span></div>
+              </div>
+              <i class="bi bi-arrow-down-circle card-icon text-success"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card summary-card border-info h-100">
+            <div class="card-body d-flex justify-content-between align-items-center">
+              <div>
+                <div class="text-muted small">Phiếu xuất hôm nay</div>
+                <div class="card-value text-info" id="issues-today"><span class="skeleton" style="width:40px;height:32px;">&nbsp;</span></div>
+              </div>
+              <i class="bi bi-arrow-up-circle card-icon text-info"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cảnh báo hàng dưới ngưỡng -->
+      <div id="low-stock-alert" class="d-none"></div>
+
+      <div class="row g-3">
+        <!-- Hàng cần nhập thêm -->
+        <div class="col-lg-6">
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Hàng dưới ngưỡng tối thiểu</span>
+              <a href="pages/goods.html" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead><tr><th>SKU</th><th>Tên hàng</th><th>Tồn kho</th><th>Ngưỡng Min</th></tr></thead>
+                  <tbody id="low-stock-table"><tr><td colspan="4" class="text-center py-3 text-muted">Đang tải...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phiếu nhập gần nhất -->
+        <div class="col-lg-6">
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span><i class="bi bi-arrow-down-circle-fill text-success me-2"></i>Phiếu nhập gần nhất</span>
+              <a href="pages/goods-receipts.html" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead><tr><th>Mã phiếu</th><th>NCC</th><th>Ngày nhận</th></tr></thead>
+                  <tbody id="receipts-table"><tr><td colspan="3" class="text-center py-3 text-muted">Đang tải...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phiếu xuất gần nhất -->
+        <div class="col-lg-6">
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span><i class="bi bi-arrow-up-circle-fill text-danger me-2"></i>Phiếu xuất gần nhất</span>
+              <a href="pages/goods-issues.html" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead><tr><th>Mã phiếu</th><th>Ngày xuất</th><th>Ghi chú</th></tr></thead>
+                  <tbody id="issues-table"><tr><td colspan="3" class="text-center py-3 text-muted">Đang tải...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Đơn đặt hàng đang xử lý -->
+        <div class="col-lg-6">
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span><i class="bi bi-cart-fill text-primary me-2"></i>Đơn đặt hàng đang xử lý</span>
+              <a href="pages/purchase-orders.html" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead><tr><th>Mã ĐH</th><th>NCC</th><th>Trạng thái</th></tr></thead>
+                  <tbody id="po-table"><tr><td colspan="3" class="text-center py-3 text-muted">Đang tải...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/layout.js"></script>
+  <script>
+    /* ========= Dashboard — Tải dữ liệu tổng quan ========= */
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      setPageTitle('Dashboard');
+
+      /* Ngày hôm nay dạng ISO (chỉ lấy phần date) */
+      const today = new Date().toISOString().split('T')[0];
+
+      /* Tải song song các API */
+      const [goodsData, lowStockData, receiptsData, issuesData, poData] = await Promise.allSettled([
+        api.get('/goods', { page: 1, page_size: 1 }),
+        api.get('/goods/low-stock', { page: 1, page_size: 100 }),
+        api.get('/goods-receipts', { date_from: today + 'T00:00:00', page: 1, page_size: 5 }),
+        api.get('/goods-issues',   { date_from: today + 'T00:00:00', page: 1, page_size: 5 }),
+        api.get('/purchase-orders', { status: 'chờ xác nhận', page: 1, page_size: 5 }),
+      ]);
+
+      /* ----- Tổng hàng hóa ----- */
+      if (goodsData.status === 'fulfilled') {
+        document.getElementById('total-goods').textContent = goodsData.value.total ?? '—';
+      } else {
+        document.getElementById('total-goods').textContent = '—';
+      }
+
+      /* ----- Hàng dưới ngưỡng ----- */
+      if (lowStockData.status === 'fulfilled') {
+        const items = lowStockData.value.data || [];
+        const total = lowStockData.value.total || 0;
+        document.getElementById('low-stock-count').textContent = total;
+
+        if (total > 0) {
+          document.getElementById('low-stock-alert').innerHTML = `
+            <div class="alert alert-warning d-flex align-items-center mb-3">
+              <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0"></i>
+              <span>Có <strong>${total}</strong> mặt hàng đang dưới ngưỡng tồn kho tối thiểu. Cần nhập thêm hàng!</span>
+            </div>`;
+          document.getElementById('low-stock-alert').classList.remove('d-none');
+        }
+
+        /* Bảng hàng dưới ngưỡng (top 5) */
+        const rows = items.slice(0, 5).map(g => `
+          <tr>
+            <td><code>${utils.escapeHtml(g.sku)}</code></td>
+            <td>${utils.escapeHtml(g.name)}</td>
+            <td class="stock-low fw-bold">${utils.formatQty(g.quantity_on_hand)} ${utils.escapeHtml(g.unit || '')}</td>
+            <td class="text-muted">${utils.formatQty(g.min_stock)}</td>
+          </tr>`).join('');
+        document.getElementById('low-stock-table').innerHTML =
+          rows || '<tr><td colspan="4" class="text-center py-3 text-muted">Không có hàng dưới ngưỡng</td></tr>';
+      }
+
+      /* ----- Phiếu nhập hôm nay ----- */
+      if (receiptsData.status === 'fulfilled') {
+        const data = receiptsData.value;
+        document.getElementById('receipts-today').textContent = data.total ?? 0;
+        const rows = (data.data || []).map(r => `
+          <tr>
+            <td><a href="pages/goods-receipts.html">#${r.id}</a></td>
+            <td>${r.supplier_id}</td>
+            <td>${utils.formatDate(r.received_date)}</td>
+          </tr>`).join('');
+        document.getElementById('receipts-table').innerHTML =
+          rows || '<tr><td colspan="3" class="text-center py-3 text-muted">Chưa có phiếu nhập hôm nay</td></tr>';
+      } else {
+        document.getElementById('receipts-today').textContent = '—';
+      }
+
+      /* ----- Phiếu xuất hôm nay ----- */
+      if (issuesData.status === 'fulfilled') {
+        const data = issuesData.value;
+        document.getElementById('issues-today').textContent = data.total ?? 0;
+        const rows = (data.data || []).map(r => `
+          <tr>
+            <td><a href="pages/goods-issues.html">#${r.id}</a></td>
+            <td>${utils.formatDate(r.issued_date)}</td>
+            <td>${utils.truncate(r.note || '—', 30)}</td>
+          </tr>`).join('');
+        document.getElementById('issues-table').innerHTML =
+          rows || '<tr><td colspan="3" class="text-center py-3 text-muted">Chưa có phiếu xuất hôm nay</td></tr>';
+      } else {
+        document.getElementById('issues-today').textContent = '—';
+      }
+
+      /* ----- Đơn đặt hàng ----- */
+      if (poData.status === 'fulfilled') {
+        const rows = (poData.value.data || []).map(p => `
+          <tr>
+            <td><a href="pages/purchase-orders.html">#${p.id}</a></td>
+            <td>${p.supplier_id}</td>
+            <td>${utils.poBadge(p.status)}</td>
+          </tr>`).join('');
+        document.getElementById('po-table').innerHTML =
+          rows || '<tr><td colspan="3" class="text-center py-3 text-muted">Không có đơn đang xử lý</td></tr>';
+      }
+    });
+  </script>
+</body>
+</html>

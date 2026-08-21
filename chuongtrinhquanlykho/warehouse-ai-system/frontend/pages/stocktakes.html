@@ -1,0 +1,337 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kiểm kê kho — Quản lý Kho</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div id="main-wrapper">
+    <div id="topbar-container"></div>
+    <main id="page-content">
+      <div class="card mb-3">
+        <div class="card-body py-2">
+          <div class="row g-2 align-items-center">
+            <div class="col-auto ms-auto">
+              <button class="btn btn-primary btn-sm" id="btn-add" data-roles="admin,warehouse_manager,warehouse_keeper">
+                <i class="bi bi-plus-lg me-1"></i>Lập phiếu kiểm kê
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Mã phiếu</th>
+                  <th>Ngày kiểm kê</th>
+                  <th class="d-none d-md-table-cell">Người lập</th>
+                  <th class="d-none d-md-table-cell">Người duyệt</th>
+                  <th>Trạng thái</th>
+                  <th class="table-actions">Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="stocktakes-tbody">
+                <tr><td colspan="6" class="text-center py-4 text-muted">Đang tải...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer"><div id="pagination-container"></div></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Lập phiếu kiểm kê -->
+  <div class="modal fade" id="stocktake-modal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Lập phiếu kiểm kê kho</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="form-error" class="alert alert-danger d-none py-2"></div>
+          <div class="mb-3">
+            <label class="form-label">Ghi chú</label>
+            <input type="text" id="f-note" class="form-control" placeholder="VD: Kiểm kê định kỳ tháng 8..."/>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>Danh sách hàng kiểm kê</strong>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-item">
+              <i class="bi bi-plus-lg me-1"></i>Thêm dòng
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-bordered table-sm">
+              <thead class="table-light">
+                <tr><th>ID Hàng hóa</th><th>Số lượng thực tế</th><th style="width:50px"></th></tr>
+              </thead>
+              <tbody id="items-tbody"></tbody>
+            </table>
+          </div>
+          <div class="alert alert-info py-2 small mt-2">
+            <i class="bi bi-info-circle me-1"></i>
+            Hệ thống tự động lấy tồn kho hệ thống và tính chênh lệch. Sau khi Thủ kho đề xuất xử lý, Quản lý kho sẽ phê duyệt để cập nhật tồn kho.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="button" class="btn btn-primary" id="btn-save">
+            <span id="save-spinner" class="spinner-border spinner-border-sm me-1 d-none"></span>Lập phiếu
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal chi tiết / đề xuất / phê duyệt -->
+  <div class="modal fade" id="detail-modal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="detail-title">Chi tiết phiếu kiểm kê</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="detail-body">Đang tải...</div>
+        <div class="modal-footer" id="detail-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/layout.js"></script>
+  <script>
+    /* ========= Kiểm kê kho ========= */
+    let currentPage = 1;
+    const PAGE_SIZE = 20;
+    let currentStocktake = null;
+    const stocktakeModal = new bootstrap.Modal(document.getElementById('stocktake-modal'));
+    const detailModal    = new bootstrap.Modal(document.getElementById('detail-modal'));
+
+    async function loadStocktakes(page = 1) {
+      currentPage = page;
+      document.getElementById('stocktakes-tbody').innerHTML =
+        '<tr><td colspan="6" class="text-center py-4 text-muted">Đang tải...</td></tr>';
+      try {
+        const data = await api.get('/stocktakes', { page, page_size: PAGE_SIZE });
+        renderTable(data.data || []);
+        utils.renderPagination('pagination-container', data.total, page, PAGE_SIZE, loadStocktakes);
+      } catch (err) {
+        document.getElementById('stocktakes-tbody').innerHTML =
+          `<tr><td colspan="6" class="text-danger text-center py-4">Lỗi: ${utils.escapeHtml(err.message)}</td></tr>`;
+      }
+    }
+
+    function renderTable(items) {
+      if (!items.length) {
+        document.getElementById('stocktakes-tbody').innerHTML =
+          '<tr><td colspan="6" class="text-center py-4 text-muted">Không có dữ liệu</td></tr>';
+        return;
+      }
+      document.getElementById('stocktakes-tbody').innerHTML = items.map(s => `
+        <tr>
+          <td><strong>#${s.id}</strong></td>
+          <td>${utils.formatDate(s.stocktake_date)}</td>
+          <td class="d-none d-md-table-cell">${s.created_by}</td>
+          <td class="d-none d-md-table-cell">${s.approved_by || '—'}</td>
+          <td>${utils.stocktakeBadge(s.status)}</td>
+          <td class="table-actions">
+            <button class="btn btn-outline-secondary btn-sm" onclick="viewDetail(${s.id})" title="Chi tiết">
+              <i class="bi bi-eye"></i>
+            </button>
+          </td>
+        </tr>`).join('');
+    }
+
+    async function viewDetail(id) {
+      document.getElementById('detail-body').innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div></div>';
+      document.getElementById('detail-title').textContent = `Phiếu kiểm kê #${id}`;
+      document.getElementById('detail-footer').innerHTML = '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>';
+      detailModal.show();
+      try {
+        const s = await api.get(`/stocktakes/${id}`);
+        currentStocktake = s;
+        const role = auth.getRole();
+
+        const itemsHtml = (s.items || []).map((it, i) => {
+          const diff = it.difference;
+          const diffClass = diff < 0 ? 'text-danger' : diff > 0 ? 'text-success' : 'text-muted';
+          const diffSign = diff > 0 ? '+' : '';
+          const actionInput = (s.status === 'đang kiểm kê' && role === 'warehouse_keeper')
+            ? `<input type="text" class="form-control form-control-sm action-input" data-item-id="${it.id}" value="${utils.escapeHtml(it.action || '')}" placeholder="Đề xuất xử lý chênh lệch..."/>`
+            : (utils.escapeHtml(it.action || '—'));
+          return `
+            <tr>
+              <td>${i+1}</td>
+              <td>${it.goods_id}</td>
+              <td>${utils.formatQty(it.system_quantity)}</td>
+              <td>${utils.formatQty(it.actual_quantity)}</td>
+              <td class="${diffClass} fw-bold">${diffSign}${utils.formatQty(diff)}</td>
+              <td>${actionInput}</td>
+            </tr>`;
+        }).join('');
+
+        document.getElementById('detail-body').innerHTML = `
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <table class="table table-borderless mb-0 small">
+                <tr><th>Người lập:</th><td>${s.created_by}</td></tr>
+                <tr><th>Người duyệt:</th><td>${s.approved_by || '—'}</td></tr>
+                <tr><th>Ngày kiểm kê:</th><td>${utils.formatDateTime(s.stocktake_date)}</td></tr>
+                <tr><th>Trạng thái:</th><td>${utils.stocktakeBadge(s.status)}</td></tr>
+                ${s.note ? `<tr><th>Ghi chú:</th><td>${utils.escapeHtml(s.note)}</td></tr>` : ''}
+              </table>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+              <thead class="table-light">
+                <tr><th>#</th><th>Hàng hóa ID</th><th>SL hệ thống</th><th>SL thực tế</th><th>Chênh lệch</th><th>Đề xuất xử lý</th></tr>
+              </thead>
+              <tbody>${itemsHtml}</tbody>
+            </table>
+          </div>`;
+
+        /* Thêm nút action tùy role + status */
+        const footer = document.getElementById('detail-footer');
+        if (s.status === 'đang kiểm kê' && role === 'warehouse_keeper') {
+          footer.innerHTML += `<button class="btn btn-warning" id="btn-propose">
+            <i class="bi bi-send me-1"></i>Đề xuất xử lý
+          </button>`;
+          document.getElementById('btn-propose').addEventListener('click', () => proposeStocktake(s.id));
+        } else if (s.status === 'chờ phê duyệt' && ['admin','warehouse_manager'].includes(role)) {
+          footer.innerHTML += `<button class="btn btn-success" id="btn-approve">
+            <i class="bi bi-check-circle me-1"></i>Phê duyệt & Cập nhật tồn kho
+          </button>`;
+          document.getElementById('btn-approve').addEventListener('click', () => approveStocktake(s.id));
+        }
+      } catch (err) {
+        document.getElementById('detail-body').innerHTML = `<div class="text-danger">Lỗi: ${utils.escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    /* Thủ kho đề xuất xử lý chênh lệch */
+    async function proposeStocktake(id) {
+      const inputs = document.querySelectorAll('.action-input');
+      const items = Array.from(inputs).map(inp => ({
+        id: parseInt(inp.dataset.itemId),
+        action: inp.value.trim(),
+      }));
+
+      const ok = await utils.confirmDialog('Đề xuất xử lý', 'Gửi đề xuất xử lý chênh lệch kiểm kê?');
+      if (!ok) return;
+      try {
+        await api.put(`/stocktakes/${id}/propose`, { items });
+        utils.showToast('Đã gửi đề xuất xử lý. Chờ Quản lý kho phê duyệt.', 'success');
+        detailModal.hide();
+        loadStocktakes(currentPage);
+      } catch (err) {
+        utils.showToast('Lỗi: ' + err.message, 'danger');
+      }
+    }
+
+    /* Quản lý kho phê duyệt */
+    async function approveStocktake(id) {
+      const ok = await utils.confirmDialog(
+        'Phê duyệt kiểm kê',
+        'Sau khi phê duyệt, tồn kho sẽ được cập nhật theo số lượng thực tế. Xác nhận?'
+      );
+      if (!ok) return;
+      try {
+        await api.put(`/stocktakes/${id}/approve`);
+        utils.showToast('Phê duyệt thành công! Tồn kho đã được cập nhật.', 'success');
+        detailModal.hide();
+        loadStocktakes(currentPage);
+      } catch (err) {
+        utils.showToast('Lỗi: ' + err.message, 'danger');
+      }
+    }
+
+    function addItemRow() {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="number" class="form-control form-control-sm" name="goods_id" min="1" placeholder="ID hàng hóa"/></td>
+        <td><input type="number" class="form-control form-control-sm" name="actual_qty" min="0" step="any" value="0" placeholder="Số lượng thực tế"/></td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()">
+          <i class="bi bi-trash"></i></button></td>`;
+      document.getElementById('items-tbody').appendChild(tr);
+    }
+
+    document.getElementById('btn-add-item').addEventListener('click', addItemRow);
+
+    document.getElementById('btn-add').addEventListener('click', () => {
+      document.getElementById('f-note').value = '';
+      document.getElementById('items-tbody').innerHTML = '';
+      document.getElementById('form-error').classList.add('d-none');
+      addItemRow();
+      stocktakeModal.show();
+    });
+
+    document.getElementById('btn-save').addEventListener('click', async () => {
+      const note = document.getElementById('f-note').value.trim();
+      const errDiv = document.getElementById('form-error');
+      errDiv.classList.add('d-none');
+
+      const rows = document.getElementById('items-tbody').rows;
+      if (!rows.length) {
+        errDiv.textContent = 'Phiếu kiểm kê phải có ít nhất 1 mặt hàng.';
+        errDiv.classList.remove('d-none');
+        return;
+      }
+
+      const items = [];
+      for (const row of rows) {
+        const goods_id    = row.querySelector('[name=goods_id]').value;
+        const actual_qty  = parseFloat(row.querySelector('[name=actual_qty]').value);
+        if (!goods_id) {
+          errDiv.textContent = 'Mỗi dòng phải có ID hàng hóa.';
+          errDiv.classList.remove('d-none');
+          return;
+        }
+        if (isNaN(actual_qty) || actual_qty < 0) {
+          errDiv.textContent = 'Số lượng thực tế không được âm.';
+          errDiv.classList.remove('d-none');
+          return;
+        }
+        items.push({ goods_id: parseInt(goods_id), actual_quantity: actual_qty });
+      }
+
+      document.getElementById('save-spinner').classList.remove('d-none');
+      document.getElementById('btn-save').disabled = true;
+
+      try {
+        const body = { items };
+        if (note) body.note = note;
+        await api.post('/stocktakes', body);
+        utils.showToast('Lập phiếu kiểm kê thành công!', 'success');
+        stocktakeModal.hide();
+        loadStocktakes(currentPage);
+      } catch (err) {
+        errDiv.textContent = 'Lỗi: ' + err.message;
+        errDiv.classList.remove('d-none');
+      } finally {
+        document.getElementById('save-spinner').classList.add('d-none');
+        document.getElementById('btn-save').disabled = false;
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setPageTitle('Kiểm kê kho');
+      loadStocktakes(1);
+    });
+  </script>
+</body>
+</html>
