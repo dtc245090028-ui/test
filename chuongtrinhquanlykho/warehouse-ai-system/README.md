@@ -119,3 +119,61 @@ curl -X POST http://localhost:5000/api/auth/login \
 curl http://localhost:5000/api/auth/me \
   -H "Authorization: Bearer <token>"
 ```
+
+---
+
+## 🐳 Triển khai bằng Docker (Khuyến nghị)
+
+> Yêu cầu: [Docker Desktop](https://www.docker.com/products/docker-desktop/) đã được cài đặt.
+
+### Bước 1 — Tạo file `.env`
+
+```bash
+cd backend
+cp .env.example .env
+# Mở .env và điền các giá trị thật:
+#   SECRET_KEY=<chuỗi ngẫu nhiên dài>
+#   GEMINI_API_KEY=<key Gemini của bạn>
+```
+
+### Bước 2 — Build và chạy toàn hệ thống
+
+```bash
+# Chạy từ thư mục warehouse-ai-system/
+docker compose up --build
+```
+
+Sau khi khởi động xong:
+| Dịch vụ | Địa chỉ |
+|---|---|
+| **Frontend (Giao diện web)** | http://localhost |
+| **API Backend trực tiếp** | http://localhost:5000/api/... |
+
+### Bước 3 — Seed dữ liệu mẫu (lần đầu)
+
+```bash
+docker exec warehouse-backend sh /app/scripts/seed_docker.sh
+```
+
+### Bước 4 — Dừng hệ thống
+
+```bash
+docker compose down          # Dừng, giữ lại dữ liệu DB
+docker compose down -v       # Dừng VÀ xóa DB (reset hoàn toàn)
+```
+
+### Cấu trúc Docker
+
+```
+warehouse-ai-system/
+├── backend/
+│   ├── Dockerfile           # Python:3.11-slim, chạy Flask
+│   └── .dockerignore
+├── frontend/
+│   ├── Dockerfile           # Nginx:alpine, serve static + proxy /api
+│   ├── nginx.conf           # Reverse proxy /api → backend:5000
+│   └── .dockerignore
+└── docker-compose.yml       # Gộp 2 services + volume SQLite
+```
+
+> **Lưu ý bảo mật**: File `backend/.env` chứa API key và SECRET_KEY thật — **không bao giờ commit** lên Git.

@@ -1,4 +1,4 @@
-﻿# Tiến trình tạo giao diện HTML/JS + Bootstrap cho hệ thống Quản lý kho
+# Tiến trình tạo giao diện HTML/JS + Bootstrap cho hệ thống Quản lý kho
 
 ## 1. Các file đã tạo thành công
 
@@ -22,12 +22,12 @@
 - `frontend/pages/stocktakes.html` (Kiểm kê kho & Xử lý chênh lệch)
 - `frontend/pages/invoices.html` (Hóa đơn nhà cung cấp & Ghi nhận thanh toán)
 
-## 2. Các trang còn lại cần tạo (Chưa hoàn thành trước khi bị gián đoạn)
+## 2. Các trang còn lại cần tạo (Đã hoàn thành)
 
-Dựa theo menu hệ thống, còn 2 trang sau chưa được tạo:
+Dựa theo menu hệ thống, 2 trang sau đã được tạo thành công:
 1. `frontend/pages/reports.html` (Báo cáo thống kê - Thể hiện giá trị tồn kho, vòng quay, top hàng hóa...)
 2. `frontend/pages/ai-features.html` (AI Trợ lý - Sinh báo cáo tồn kho tự động & gợi ý nhập hàng bằng AI)
 
-## 3. Bước tiếp theo
+## 3. Hoàn thiện 100%
 
-Tôi sẽ tiếp tục chạy các lệnh để tạo ra nốt 2 file HTML cuối cùng này để hoàn thiện 100% frontend cho dự án.
+Toàn bộ giao diện frontend (HTML/JS + Bootstrap) của dự án Quản lý kho đã hoàn tất! Các API đã được đấu nối đầy đủ theo đúng `api_contract.md`.

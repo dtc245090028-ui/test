@@ -1,0 +1,43 @@
+# ============================================================
+# .dockerignore — Backend
+# ============================================================
+# Loại trừ các file không cần thiết khi build Docker image.
+# Giúp image nhỏ hơn và build nhanh hơn.
+# ============================================================
+
+# Virtual environment — không bao giờ copy vào container
+venv/
+.venv/
+env/
+
+# Bytecode Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Test và cache
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Database cục bộ (được mount qua volume trong Docker)
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# File môi trường thật (CHỈ dùng .env.example)
+.env
+
+# Editor và OS
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore

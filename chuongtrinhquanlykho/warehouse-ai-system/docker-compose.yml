@@ -1,0 +1,97 @@
+# ============================================================
+# docker-compose.yml — Hệ thống Quản lý Kho có tích hợp AI
+# ============================================================
+# Gồm 2 services:
+#   backend  — Flask API (port 5000, nội bộ)
+#   frontend — Nginx serve HTML/JS + reverse proxy /api → backend
+#
+# CÁCH DÙNG:
+#
+#   1. Tạo file .env trong thư mục backend/:
+#        cd backend && cp .env.example .env
+#        # Điền GEMINI_API_KEY và SECRET_KEY vào .env
+#
+#   2. Chạy toàn hệ thống:
+#        docker compose up --build
+#
+#   3. Truy cập:
+#        Frontend: http://localhost
+#        API trực tiếp: http://localhost:5000/api/...  (debug)
+#
+#   4. Dừng:
+#        docker compose down
+#
+#   5. Dừng và xóa dữ liệu (DB):
+#        docker compose down -v
+# ============================================================
+
+services:
+
+  # ──────────────────────────────────────────
+  # SERVICE: backend — Flask API
+  # ──────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend       # Thư mục chứa Dockerfile backend
+      dockerfile: Dockerfile
+    container_name: warehouse-backend
+
+    # Đọc biến môi trường từ file backend/.env
+    # Không commit file .env lên Git!
+    env_file:
+      - ./backend/.env
+
+    # Ghi đè DATABASE_URL để dùng thư mục /data trong volume
+    environment:
+      - DATABASE_URL=sqlite:////data/warehouse.db
+      - FLASK_ENV=production
+
+    # Volume lưu SQLite DB bền vững ngoài container
+    # Dữ liệu không mất khi restart container
+    volumes:
+      - db_data:/data
+
+    # Port expose ra ngoài (tuỳ chọn — chỉ cần debug trực tiếp API)
+    # Nếu chỉ dùng qua frontend Nginx, có thể xóa dòng này
+    ports:
+      - "5000:5000"
+
+    # Đảm bảo backend khởi động trước (không đảm bảo healthy hoàn toàn)
+    # healthcheck xử lý chắc hơn nếu cần
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/auth/me')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+    restart: unless-stopped
+
+
+  # ──────────────────────────────────────────
+  # SERVICE: frontend — Nginx static + proxy
+  # ──────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend      # Thư mục chứa Dockerfile frontend
+      dockerfile: Dockerfile
+    container_name: warehouse-frontend
+
+    # Port expose ra ngoài — truy cập qua http://localhost
+    ports:
+      - "80:80"
+
+    # Frontend phụ thuộc backend — khởi động sau backend
+    depends_on:
+      - backend
+
+    restart: unless-stopped
+
+
+# ──────────────────────────────────────────
+# VOLUMES — Lưu trữ bền vững
+# ──────────────────────────────────────────
+volumes:
+  # db_data lưu file SQLite giữa các lần restart container
+  db_data:
+    driver: local

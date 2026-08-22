@@ -1,0 +1,17 @@
+# ============================================================
+# .dockerignore — Frontend
+# ============================================================
+
+# Git
+.git/
+.gitignore
+.gitkeep
+
+# Editor và OS
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Docs (không cần trong image)
+*.md

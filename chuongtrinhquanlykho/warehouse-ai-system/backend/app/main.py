@@ -83,6 +83,12 @@ def create_app(test_config: dict = None) -> Flask:
     # ---- Đăng ký Error Handlers dùng chung ----
     _register_error_handlers(app)
 
+    # ---- Khởi tạo Scheduler (chạy ngầm kiểm tra tồn kho) ----
+    # Chỉ chạy scheduler nếu không phải môi trường test
+    if not test_config:
+        from app.ai.scheduler import init_scheduler
+        init_scheduler(app)
+
     app.logger.info(f"🚀 Ứng dụng khởi động thành công | ENV={os.getenv('FLASK_ENV', 'development')}")
     return app
 
